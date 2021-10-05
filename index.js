@@ -52,6 +52,7 @@ class HomebridgeTapoCamera {
     HTTP.http.httpRequest(
       {
         url: `https://${this.config.ipAddress}`,
+        strictSSL: false,
         body: JSON.stringify({
           method: "login",
           params: {
@@ -86,6 +87,7 @@ class HomebridgeTapoCamera {
       HTTP.http.httpRequest(
         {
           url,
+          strictSSL: false,
           method: "post",
           body: JSON.stringify({
             method: "multipleRequest",
@@ -125,6 +127,7 @@ class HomebridgeTapoCamera {
       HTTP.http.httpRequest(
         {
           url,
+          strictSSL: false,
           method: "post",
           body: JSON.stringify({
             method: "multipleRequest",
