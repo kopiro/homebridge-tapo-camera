@@ -136,7 +136,7 @@ class HomebridgeTapoCamera {
     const maskConfig = json.result.responses.find(
       (r) => r.method === "getLensMaskConfig"
     );
-    return maskConfig.result.lens_mask.lens_mask_info.enabled === "on";
+    return maskConfig.result.lens_mask.lens_mask_info.enabled === "off";
   }
 
   async setStatus(value) {
@@ -148,7 +148,7 @@ class HomebridgeTapoCamera {
       body: JSON.stringify({
         method: "multipleRequest",
         params: {
-          requests: [setLensMaskConfigJSON(value)],
+          requests: [setLensMaskConfigJSON(!value)],
         },
       }),
       headers: {
