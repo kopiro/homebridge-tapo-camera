@@ -74,7 +74,7 @@ class HomebridgeTapoCamera {
     });
 
     const json = await response.json();
-    this.log.debug("getToken", json);
+    this.log.debug("getToken", JSON.stringify(json, null, 2));
 
     if (!json.result.stok) {
       throw new Error("Unable to find token in response");
@@ -114,9 +114,9 @@ class HomebridgeTapoCamera {
       },
     });
     const json = await response.json();
-    this.log.debug("getStatus", json);
+    this.log.debug("getStatus", JSON.stringify(json, null, 2));
 
-    return json.enabled === "on";
+    return json.result.responses[0].enabled === "on";
   }
 
   async setStatus(value) {
@@ -137,7 +137,7 @@ class HomebridgeTapoCamera {
     });
 
     const json = await response.json();
-    this.log.debug("setStatus", json);
+    this.log.debug("setStatus", JSON.stringify(json, null, 2));
     return true;
   }
 }
