@@ -39,7 +39,7 @@ class HomebridgeTapoCamera {
   getServices() {
     if (!this.homebridgeService) return [];
 
-    const informationService = new this.api.HAP.Service.AccessoryInformation();
+    const informationService = new this.api.hap.Service.AccessoryInformation();
     informationService
       .setCharacteristic(
         this.api.HAP.Characteristic.Manufacturer,
