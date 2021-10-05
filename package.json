@@ -6,8 +6,17 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "homebridge-plugin"
+  ],
+  "engines": {
+    "homebridge": ">=1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kopiro/homebridge-tapo-camera"
+  },
+  "author": "Flavio De Stefano <destefano.flavio@gmail.com>",
   "license": "ISC",
   "dependencies": {
     "homebridge-http-base": "^2.1.12"

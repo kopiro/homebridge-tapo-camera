@@ -1,5 +1,5 @@
 const { HTTP, PullTimer } = require("homebridge-http-base");
-let Service, Characteristic;
+let HAP;
 
 function setLensMaskConfigJSON(enabled) {
   return {
@@ -18,7 +18,7 @@ class HomebridgeTapoCamera {
   constructor(log, config) {
     this.log = log;
     this.config = config;
-    this.homebridgeService = new Service.Switch(this.config.name);
+    this.homebridgeService = new HAP.Service.Switch(this.config.name);
 
     this.pullTimer = new PullTimer(
       this.log,
@@ -26,7 +26,7 @@ class HomebridgeTapoCamera {
       this.getStatus.bind(this),
       (value) => {
         this.homebridgeService
-          .getCharacteristic(Characteristic.On)
+          .getCharacteristic(HAP.Characteristic.On)
           .updateValue(value);
       }
     );
@@ -36,15 +36,15 @@ class HomebridgeTapoCamera {
   getServices() {
     if (!this.homebridgeService) return [];
 
-    const informationService = new Service.AccessoryInformation();
+    const informationService = new HAP.Service.AccessoryInformation();
     informationService
-      .setCharacteristic(Characteristic.Manufacturer, "Flavio De Stefano")
-      .setCharacteristic(Characteristic.Model, "TAPO Camera")
+      .setCharacteristic(HAP.Characteristic.Manufacturer, "Flavio De Stefano")
+      .setCharacteristic(HAP.Characteristic.Model, "TAPO Camera")
       .setCharacteristic(
-        Characteristic.SerialNumber,
+        HAP.Characteristic.SerialNumber,
         this.serialNumber || "TAPO"
       )
-      .setCharacteristic(Characteristic.FirmwareRevision, "1.0.0");
+      .setCharacteristic(HAP.Characteristic.FirmwareRevision, "1.0.0");
     return [informationService, this.homebridgeService];
   }
 
@@ -147,8 +147,7 @@ class HomebridgeTapoCamera {
 }
 
 module.exports = function (homebridge) {
-  Service = homebridge.hap.Service;
-  Characteristic = homebridge.hap.Characteristic;
+  HAP = homebridge.hap;
 
   homebridge.registerAccessory(
     "homebridge-tapo-camera",
