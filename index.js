@@ -116,7 +116,14 @@ class HomebridgeTapoCamera {
     const json = await response.json();
     this.log.debug("getStatus", JSON.stringify(json, null, 2));
 
-    return json.result.responses[0].enabled === "on";
+    if (json.error_code !== 0) {
+      throw new Error("Camera replied with error");
+    }
+
+    const maskConfig = json.result.responses.find(
+      (r) => r.method === "getLensMaskConfig"
+    );
+    return maskConfig.result.lens_mask.lens_mask_info.enabled === "on";
   }
 
   async setStatus(value) {
@@ -138,7 +145,15 @@ class HomebridgeTapoCamera {
 
     const json = await response.json();
     this.log.debug("setStatus", JSON.stringify(json, null, 2));
-    return true;
+
+    if (json.error_code !== 0) {
+      throw new Error("Camera replied with error");
+    }
+
+    const maskConfig = json.result.responses.find(
+      (r) => r.method === "setLensMaskConfig"
+    );
+    return maskConfig.error_code === 0;
   }
 }
 
