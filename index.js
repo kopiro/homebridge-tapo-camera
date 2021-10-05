@@ -74,6 +74,7 @@ class HomebridgeTapoCamera {
       (error, response, body) => {
         if (error) return callback(error);
         this.log.debug("getToken response", body);
+
         try {
           const json = response.toJSON();
           if (!json.result.stok) {
@@ -88,8 +89,8 @@ class HomebridgeTapoCamera {
   }
 
   getCameraUrl(callback) {
-    this.getToken((err, token) => {
-      if (err) return err;
+    this.getToken((error, token) => {
+      if (error) return callback(error);
       callback(null, `https://${this.config.ipAddress}/stok=${token}/ds`);
     });
   }
@@ -98,7 +99,10 @@ class HomebridgeTapoCamera {
     if (this.pullTimer) this.pullTimer.resetTimer();
 
     this.getCameraUrl((error, url) => {
-      if (error) return callback(error);
+      if (error) {
+        this.log.error("getStatus", error);
+        return callback(error);
+      }
 
       this.log.debug("getStatusURL", url);
 
@@ -144,7 +148,10 @@ class HomebridgeTapoCamera {
     if (this.pullTimer) this.pullTimer.resetTimer();
 
     this.getCameraUrl((error, url) => {
-      if (error) return callback(error);
+      if (error) {
+        this.log.error("setStatus", error);
+        return callback(error);
+      }
 
       this.log.debug("setStatusURL", url);
 
