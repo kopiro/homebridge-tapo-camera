@@ -1,5 +1,4 @@
 const HTTP = require("homebridge-http-base");
-let HAP;
 
 function setLensMaskConfigJSON(enabled) {
   return {
@@ -15,10 +14,14 @@ function setLensMaskConfigJSON(enabled) {
 }
 
 class HomebridgeTapoCamera {
-  constructor(log, config) {
+  constructor(log, config, api) {
     this.log = log;
     this.config = config;
-    this.homebridgeService = new HAP.Service.Switch(this.config.name);
+    this.api = api;
+
+    this.log.debug("TAPO-CAMERA loaded");
+
+    this.homebridgeService = new this.api.hap.Service.Switch(this.config.name);
 
     this.pullTimer = new HTTP.PullTimer(
       this.log,
@@ -26,7 +29,7 @@ class HomebridgeTapoCamera {
       this.getStatus.bind(this),
       (value) => {
         this.homebridgeService
-          .getCharacteristic(HAP.Characteristic.On)
+          .getCharacteristic(this.api.hap.Characteristic.On)
           .updateValue(value);
       }
     );
@@ -36,28 +39,25 @@ class HomebridgeTapoCamera {
   getServices() {
     if (!this.homebridgeService) return [];
 
-    const informationService = new HAP.Service.AccessoryInformation();
+    const informationService = new this.api.HAP.Service.AccessoryInformation();
     informationService
-      .setCharacteristic(HAP.Characteristic.Manufacturer, "Flavio De Stefano")
-      .setCharacteristic(HAP.Characteristic.Model, "TAPO Camera")
       .setCharacteristic(
-        HAP.Characteristic.SerialNumber,
+        this.api.HAP.Characteristic.Manufacturer,
+        "Flavio De Stefano"
+      )
+      .setCharacteristic(this.api.HAP.Characteristic.Model, "TAPO Camera")
+      .setCharacteristic(
+        this.api.HAP.Characteristic.SerialNumber,
         this.serialNumber || "TAPO"
       )
-      .setCharacteristic(HAP.Characteristic.FirmwareRevision, "1.0.0");
+      .setCharacteristic(this.api.HAP.Characteristic.FirmwareRevision, "1.0.0");
     return [informationService, this.homebridgeService];
-  }
-
-  debugLog(...args) {
-    if (this.config.debug) {
-      this.log(...args);
-    }
   }
 
   getToken(callback) {
     HTTP.http.httpRequest(
       {
-        url: `https://${this.config.ipAddress}`,
+        url: `https://${this.config.ipAddress}/`,
         strictSSL: false,
         body: JSON.stringify({
           method: "login",
@@ -72,7 +72,7 @@ class HomebridgeTapoCamera {
       },
       (error, response, body) => {
         if (error) return callback(error);
-        this.debugLog("getToken response", body);
+        this.log.debug("getToken response", response, body);
         try {
           const json = JSON.parse(body);
           callback(null, json.stok);
@@ -121,7 +121,7 @@ class HomebridgeTapoCamera {
         },
         (error, response, body) => {
           if (error) return callback(error);
-          this.debugLog("Response from getStatus", body);
+          this.log.debug("Response from getStatus", body);
           const json = JSON.parse(body);
           callback(json.enabled === "on");
         }
@@ -152,7 +152,7 @@ class HomebridgeTapoCamera {
         },
         (error, response, body) => {
           if (error) return callback(error);
-          this.debugLog("Response from setStatus", body);
+          this.log.debug("Response from setStatus", body);
           callback();
         }
       );
@@ -161,8 +161,6 @@ class HomebridgeTapoCamera {
 }
 
 module.exports = function (homebridge) {
-  HAP = homebridge.hap;
-
   homebridge.registerAccessory(
     "homebridge-tapo-camera",
     "TAPO-CAMERA",
