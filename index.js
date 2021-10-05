@@ -76,7 +76,10 @@ class HomebridgeTapoCamera {
         this.log.debug("getToken response", body);
         try {
           const json = response.toJSON();
-          callback(null, json.stok);
+          if (!json.result.stok) {
+            return callback(new Error("Unable to find token in response"));
+          }
+          callback(null, json.result.stok);
         } catch (err) {
           callback(err);
         }
@@ -123,8 +126,12 @@ class HomebridgeTapoCamera {
         (error, response, body) => {
           if (error) return callback(error);
           this.log.debug("Response from getStatus", body);
-          const json = response.toJSON();
-          callback(json.enabled === "on");
+          try {
+            const json = response.toJSON();
+            callback(json.enabled === "on");
+          } catch (err) {
+            callback(err);
+          }
         }
       );
     });
