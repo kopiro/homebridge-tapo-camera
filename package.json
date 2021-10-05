@@ -16,7 +16,7 @@
     "type": "git",
     "url": "https://github.com/kopiro/homebridge-tapo-camera"
   },
-  "author": "Flavio De Stefano <destefano.flavio@gmail.com>",
+  "author": "Flavio De Stefano",
   "license": "ISC",
   "dependencies": {
     "node-fetch": "^2.6.5"

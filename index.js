@@ -1,5 +1,6 @@
 const fetch = require("node-fetch");
 const https = require("https");
+const pkg = require("./package.json");
 
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false,
@@ -24,7 +25,11 @@ class HomebridgeTapoCamera {
     this.config = config;
     this.api = api;
 
-    this.log.debug("TAPO-CAMERA loaded");
+    if (!this.config.name) throw new Error("Missing name");
+    if (!this.config.password) throw new Error("Missing password");
+    if (!this.config.ipAddress) throw new Error("Missing IP Address");
+
+    this.log.debug("TAPO-CAMERA loaded", this.config);
 
     this.switchService = new this.api.hap.Service.Switch(this.config.name);
 
@@ -49,16 +54,16 @@ class HomebridgeTapoCamera {
 
     this.informationService = new this.api.hap.Service.AccessoryInformation();
     this.informationService
-      .setCharacteristic(
-        this.api.hap.Characteristic.Manufacturer,
-        "Flavio De Stefano"
-      )
-      .setCharacteristic(this.api.hap.Characteristic.Model, "TAPO Camera")
+      .setCharacteristic(this.api.hap.Characteristic.Manufacturer, pkg.author)
+      .setCharacteristic(this.api.hap.Characteristic.Model, pkg.name)
       .setCharacteristic(
         this.api.hap.Characteristic.SerialNumber,
-        this.serialNumber || "TAPO"
+        this.serialNumber || `TAPO-${this.config.name}`
       )
-      .setCharacteristic(this.api.hap.Characteristic.FirmwareRevision, "1.0.0");
+      .setCharacteristic(
+        this.api.hap.Characteristic.FirmwareRevision,
+        pkg.version
+      );
   }
 
   getServices() {
