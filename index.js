@@ -89,6 +89,7 @@ class HomebridgeTapoCamera {
 
   getCameraUrl(callback) {
     this.getToken((err, token) => {
+      if (err) return err;
       callback(null, `https://${this.config.ipAddress}/stok=${token}/ds`);
     });
   }
@@ -98,6 +99,8 @@ class HomebridgeTapoCamera {
 
     this.getCameraUrl((error, url) => {
       if (error) return callback(error);
+
+      this.log.debug("getStatusURL", url);
 
       HTTP.http.httpRequest(
         {
@@ -142,6 +145,8 @@ class HomebridgeTapoCamera {
 
     this.getCameraUrl((error, url) => {
       if (error) return callback(error);
+
+      this.log.debug("setStatusURL", url);
 
       HTTP.http.httpRequest(
         {
