@@ -30,11 +30,11 @@ class HomebridgeTapoCamera {
 
     this.switchService
       .getCharacteristic(this.api.hap.Characteristic.On)
-      .on(CharacteristicEventTypes.GET, async (callback) => {
+      .on("get", async (callback) => {
         const status = await this.getStatus();
         callback(null, status);
       })
-      .on(CharacteristicEventTypes.SET, async (value, callback) => {
+      .on("set", async (value, callback) => {
         const status = await this.setStatus(value);
         callback(null, status);
       });
