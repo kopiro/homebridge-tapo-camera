@@ -48,6 +48,12 @@ class HomebridgeTapoCamera {
     return [informationService, this.homebridgeService];
   }
 
+  debugLog(...args) {
+    if (this.config.debug) {
+      this.log(...args);
+    }
+  }
+
   getToken(callback) {
     HTTP.http.httpRequest(
       {
@@ -66,8 +72,13 @@ class HomebridgeTapoCamera {
       },
       (error, response, body) => {
         if (error) return callback(error);
-        const json = JSON.parse(body);
-        callback(null, json.stok);
+        this.debugLog("getToken response", body);
+        try {
+          const json = JSON.parse(body);
+          callback(null, json.stok);
+        } catch (err) {
+          callback(err);
+        }
       }
     );
   }
@@ -110,7 +121,7 @@ class HomebridgeTapoCamera {
         },
         (error, response, body) => {
           if (error) return callback(error);
-          this.log("Response from getStatus", body);
+          this.debugLog("Response from getStatus", body);
           const json = JSON.parse(body);
           callback(json.enabled === "on");
         }
@@ -141,7 +152,7 @@ class HomebridgeTapoCamera {
         },
         (error, response, body) => {
           if (error) return callback(error);
-          this.log("Response from setStatus", body);
+          this.debugLog("Response from setStatus", body);
           callback();
         }
       );
