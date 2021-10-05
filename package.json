@@ -19,7 +19,7 @@
   "author": "Flavio De Stefano <destefano.flavio@gmail.com>",
   "license": "ISC",
   "dependencies": {
-    "node-fetch": "^3.0.0"
+    "node-fetch": "^2.6.5"
   },
   "devDependencies": {
     "homebridge": "^1.3.4"
