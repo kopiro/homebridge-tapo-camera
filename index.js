@@ -47,7 +47,7 @@ class HomebridgeTapoCamera {
       )
       .setCharacteristic(this.api.hap.Characteristic.Model, "TAPO Camera")
       .setCharacteristic(
-        this.api.HAP.Characteristic.SerialNumber,
+        this.api.hap.Characteristic.SerialNumber,
         this.serialNumber || "TAPO"
       )
       .setCharacteristic(this.api.hap.Characteristic.FirmwareRevision, "1.0.0");
