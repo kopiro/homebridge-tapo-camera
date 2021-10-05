@@ -1,4 +1,4 @@
-const { HTTP, PullTimer } = require("homebridge-http-base");
+const HTTP = require("homebridge-http-base");
 let HAP;
 
 function setLensMaskConfigJSON(enabled) {
@@ -20,7 +20,7 @@ class HomebridgeTapoCamera {
     this.config = config;
     this.homebridgeService = new HAP.Service.Switch(this.config.name);
 
-    this.pullTimer = new PullTimer(
+    this.pullTimer = new HTTP.PullTimer(
       this.log,
       this.config.pullInterval,
       this.getStatus.bind(this),
@@ -49,7 +49,7 @@ class HomebridgeTapoCamera {
   }
 
   getToken(callback) {
-    HTTP.httpRequest(
+    HTTP.http.httpRequest(
       {
         url: `https://${this.config.ipAddress}`,
         body: JSON.stringify({
@@ -83,7 +83,7 @@ class HomebridgeTapoCamera {
     this.getCameraUrl((error, url) => {
       if (error) return callback(error);
 
-      HTTP.httpRequest(
+      HTTP.http.httpRequest(
         {
           url,
           method: "post",
@@ -122,7 +122,7 @@ class HomebridgeTapoCamera {
     this.getCameraUrl((error, url) => {
       if (error) return callback(error);
 
-      HTTP.httpRequest(
+      HTTP.http.httpRequest(
         {
           url,
           method: "post",
