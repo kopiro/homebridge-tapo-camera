@@ -45,12 +45,12 @@ class HomebridgeTapoCamera {
         this.api.HAP.Characteristic.Manufacturer,
         "Flavio De Stefano"
       )
-      .setCharacteristic(this.api.HAP.Characteristic.Model, "TAPO Camera")
+      .setCharacteristic(this.api.hap.Characteristic.Model, "TAPO Camera")
       .setCharacteristic(
         this.api.HAP.Characteristic.SerialNumber,
         this.serialNumber || "TAPO"
       )
-      .setCharacteristic(this.api.HAP.Characteristic.FirmwareRevision, "1.0.0");
+      .setCharacteristic(this.api.hap.Characteristic.FirmwareRevision, "1.0.0");
     return [informationService, this.homebridgeService];
   }
 
