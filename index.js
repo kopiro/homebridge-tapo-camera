@@ -58,6 +58,7 @@ class HomebridgeTapoCamera {
     HTTP.http.httpRequest(
       {
         url: `https://${this.config.ipAddress}/`,
+        method: "post",
         strictSSL: false,
         body: JSON.stringify({
           method: "login",
@@ -72,9 +73,9 @@ class HomebridgeTapoCamera {
       },
       (error, response, body) => {
         if (error) return callback(error);
-        this.log.debug("getToken response", response, body);
+        this.log.debug("getToken response", body);
         try {
-          const json = JSON.parse(body);
+          const json = response.toJSON();
           callback(null, json.stok);
         } catch (err) {
           callback(err);
@@ -122,7 +123,7 @@ class HomebridgeTapoCamera {
         (error, response, body) => {
           if (error) return callback(error);
           this.log.debug("Response from getStatus", body);
-          const json = JSON.parse(body);
+          const json = response.toJSON();
           callback(json.enabled === "on");
         }
       );
