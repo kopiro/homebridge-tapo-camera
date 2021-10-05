@@ -72,9 +72,10 @@ class HomebridgeTapoCamera {
       },
       agent: httpsAgent,
     });
-    this.log.debug("getToken", response.body);
 
     const json = await response.json();
+    this.log.debug("getToken", json);
+
     if (!json.result.stok) {
       throw new Error("Unable to find token in response");
     }
@@ -112,9 +113,9 @@ class HomebridgeTapoCamera {
         "Content-Type": "application/json",
       },
     });
-    this.log.debug("getStatus", response.body);
-
     const json = await response.json();
+    this.log.debug("getStatus", json);
+
     return json.enabled === "on";
   }
 
@@ -135,8 +136,8 @@ class HomebridgeTapoCamera {
       },
     });
 
-    this.log.debug("setStatus", response.body);
     const json = await response.json();
+    this.log.debug("setStatus", json);
     return true;
   }
 }
