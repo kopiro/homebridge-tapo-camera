@@ -26,14 +26,21 @@ class HomebridgeTapoCamera {
 
     this.log.debug("TAPO-CAMERA loaded");
 
-    this.homebridgeService = new this.api.hap.Service.Switch(this.config.name);
-  }
+    this.switchService = new this.api.hap.Service.Switch(this.config.name);
 
-  getServices() {
-    if (!this.homebridgeService) return [];
+    this.switchService
+      .getCharacteristic(this.api.hap.Characteristic.On)
+      .on(CharacteristicEventTypes.GET, async (callback) => {
+        const status = await this.getStatus();
+        callback(null, status);
+      })
+      .on(CharacteristicEventTypes.SET, async (value, callback) => {
+        const status = await this.setStatus(value);
+        callback(null, status);
+      });
 
-    const informationService = new this.api.hap.Service.AccessoryInformation();
-    informationService
+    this.informationService = new this.api.hap.Service.AccessoryInformation();
+    this.informationService
       .setCharacteristic(
         this.api.hap.Characteristic.Manufacturer,
         "Flavio De Stefano"
@@ -44,7 +51,10 @@ class HomebridgeTapoCamera {
         this.serialNumber || "TAPO"
       )
       .setCharacteristic(this.api.hap.Characteristic.FirmwareRevision, "1.0.0");
-    return [informationService, this.homebridgeService];
+  }
+
+  getServices() {
+    return [this.informationService, this.switchService];
   }
 
   async getToken() {
@@ -77,65 +87,57 @@ class HomebridgeTapoCamera {
     return `https://${this.config.ipAddress}/stok=${token}/ds`;
   }
 
-  async getStatus(callback) {
-    try {
-      const url = await this.getCameraUrl();
+  async getStatus() {
+    const url = await this.getCameraUrl();
 
-      const response = await fetch(url, {
-        method: "post",
-        agent: httpsAgent,
-        body: JSON.stringify({
-          method: "multipleRequest",
-          params: {
-            requests: [
-              {
-                method: "getLensMaskConfig",
-                params: {
-                  lens_mask: {
-                    name: "lens_mask_info",
-                  },
+    const response = await fetch(url, {
+      method: "post",
+      agent: httpsAgent,
+      body: JSON.stringify({
+        method: "multipleRequest",
+        params: {
+          requests: [
+            {
+              method: "getLensMaskConfig",
+              params: {
+                lens_mask: {
+                  name: "lens_mask_info",
                 },
               },
-            ],
-          },
-        }),
-        headers: {
-          "Content-Type": "application/json",
+            },
+          ],
         },
-      });
-      this.log.debug("getStatus", response.body);
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    this.log.debug("getStatus", response.body);
 
-      const json = await response.json();
-      callback(response.enabled === "on");
-    } catch (err) {
-      callback(err);
-    }
+    const json = await response.json();
+    return json.enabled === "on";
   }
 
-  async setStatus(on, callback) {
-    try {
-      const url = await this.getCameraUrl();
+  async setStatus(value) {
+    const url = await this.getCameraUrl();
 
-      const response = await fetch(url, {
-        agent: httpsAgent,
-        method: "post",
-        body: JSON.stringify({
-          method: "multipleRequest",
-          params: {
-            requests: [setLensMaskConfigJSON(on)],
-          },
-        }),
-        headers: {
-          "Content-Type": "application/json",
+    const response = await fetch(url, {
+      agent: httpsAgent,
+      method: "post",
+      body: JSON.stringify({
+        method: "multipleRequest",
+        params: {
+          requests: [setLensMaskConfigJSON(value)],
         },
-      });
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-      this.log.debug("setStatus", response.body);
-      const json = await response.json();
-      callback();
-    } catch (err) {
-      callback(err);
-    }
+    this.log.debug("setStatus", response.body);
+    const json = await response.json();
+    return true;
   }
 }
 
