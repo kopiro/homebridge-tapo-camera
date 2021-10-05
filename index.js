@@ -31,12 +31,20 @@ class HomebridgeTapoCamera {
     this.switchService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .on("get", async (callback) => {
-        const status = await this.getStatus();
-        callback(null, status);
+        try {
+          const status = await this.getStatus();
+          callback(null, status);
+        } catch (err) {
+          callback(err);
+        }
       })
       .on("set", async (value, callback) => {
-        const status = await this.setStatus(value);
-        callback(null, status);
+        try {
+          await this.setStatus(value);
+          callback(null);
+        } catch (err) {
+          callback(err);
+        }
       });
 
     this.informationService = new this.api.hap.Service.AccessoryInformation();
