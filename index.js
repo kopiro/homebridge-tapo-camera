@@ -1,4 +1,9 @@
-const HTTP = require("homebridge-http-base");
+const fetch = require("node-fetch");
+const https = require("https");
+
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false,
+});
 
 function setLensMaskConfigJSON(enabled) {
   return {
@@ -22,18 +27,6 @@ class HomebridgeTapoCamera {
     this.log.debug("TAPO-CAMERA loaded");
 
     this.homebridgeService = new this.api.hap.Service.Switch(this.config.name);
-
-    this.pullTimer = new HTTP.PullTimer(
-      this.log,
-      this.config.pullInterval,
-      this.getStatus.bind(this),
-      (value) => {
-        this.homebridgeService
-          .getCharacteristic(this.api.hap.Characteristic.On)
-          .updateValue(value);
-      }
-    );
-    this.pullTimer.start();
   }
 
   getServices() {
@@ -54,127 +47,95 @@ class HomebridgeTapoCamera {
     return [informationService, this.homebridgeService];
   }
 
-  getToken(callback) {
-    HTTP.http.httpRequest(
-      {
-        url: `https://${this.config.ipAddress}/`,
+  async getToken() {
+    const response = await fetch(`https://${this.config.ipAddress}/`, {
+      method: "post",
+      body: JSON.stringify({
+        method: "login",
+        params: {
+          username: "admin",
+          password: this.config.password,
+        },
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      agent: httpsAgent,
+    });
+    this.log.debug("getToken", response.body);
+
+    const json = await response.json();
+    if (!json.result.stok) {
+      throw new Error("Unable to find token in response");
+    }
+
+    return json.result.stok;
+  }
+
+  async getCameraUrl() {
+    const token = await this.getToken();
+    return `https://${this.config.ipAddress}/stok=${token}/ds`;
+  }
+
+  async getStatus(callback) {
+    try {
+      const url = await this.getCameraUrl();
+
+      const response = await fetch(url, {
         method: "post",
-        strictSSL: false,
+        agent: httpsAgent,
         body: JSON.stringify({
-          method: "login",
+          method: "multipleRequest",
           params: {
-            username: "admin",
-            password: this.config.password,
+            requests: [
+              {
+                method: "getLensMaskConfig",
+                params: {
+                  lens_mask: {
+                    name: "lens_mask_info",
+                  },
+                },
+              },
+            ],
           },
         }),
         headers: {
           "Content-Type": "application/json",
         },
-      },
-      (error, response, body) => {
-        if (error) return callback(error);
-        this.log.debug("getToken response", body);
+      });
+      this.log.debug("getStatus", response.body);
 
-        try {
-          if (!response.result.stok) {
-            return callback(new Error("Unable to find token in response"));
-          }
-          callback(null, response.result.stok);
-        } catch (err) {
-          callback(err);
-        }
-      }
-    );
+      const json = await response.json();
+      callback(response.enabled === "on");
+    } catch (err) {
+      callback(err);
+    }
   }
 
-  getCameraUrl(callback) {
-    this.getToken((error, token) => {
-      if (error) return callback(error);
-      callback(null, `https://${this.config.ipAddress}/stok=${token}/ds`);
-    });
-  }
+  async setStatus(on, callback) {
+    try {
+      const url = await this.getCameraUrl();
 
-  getStatus(callback) {
-    if (this.pullTimer) this.pullTimer.resetTimer();
-
-    this.getCameraUrl((error, url) => {
-      if (error) {
-        this.log.error("getStatus", error);
-        return callback(error);
-      }
-
-      this.log.debug("getStatusURL", url);
-
-      HTTP.http.httpRequest(
-        {
-          url,
-          strictSSL: false,
-          method: "post",
-          body: JSON.stringify({
-            method: "multipleRequest",
-            params: {
-              requests: [
-                {
-                  method: "getLensMaskConfig",
-                  params: {
-                    lens_mask: {
-                      name: "lens_mask_info",
-                    },
-                  },
-                },
-              ],
-            },
-          }),
-          headers: {
-            "Content-Type": "application/json",
+      const response = await fetch(url, {
+        agent: httpsAgent,
+        method: "post",
+        body: JSON.stringify({
+          method: "multipleRequest",
+          params: {
+            requests: [setLensMaskConfigJSON(on)],
           },
+        }),
+        headers: {
+          "Content-Type": "application/json",
         },
-        (error, response, body) => {
-          if (error) return callback(error);
-          this.log.debug("Response from getStatus", body);
-          try {
-            callback(response.enabled === "on");
-          } catch (err) {
-            callback(err);
-          }
-        }
-      );
-    });
-  }
+      });
 
-  setStatus(on, callback) {
-    if (this.pullTimer) this.pullTimer.resetTimer();
-
-    this.getCameraUrl((error, url) => {
-      if (error) {
-        this.log.error("setStatus", error);
-        return callback(error);
-      }
-
-      this.log.debug("setStatusURL", url);
-
-      HTTP.http.httpRequest(
-        {
-          url,
-          strictSSL: false,
-          method: "post",
-          body: JSON.stringify({
-            method: "multipleRequest",
-            params: {
-              requests: [setLensMaskConfigJSON(on)],
-            },
-          }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-        (error, response, body) => {
-          if (error) return callback(error);
-          this.log.debug("Response from setStatus", body);
-          callback();
-        }
-      );
-    });
+      this.log.debug("setStatus", response.body);
+      const json = await response.json();
+      callback();
+    } catch (err) {
+      callback(err);
+    }
   }
 }
 
