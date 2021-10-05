@@ -42,7 +42,7 @@ class HomebridgeTapoCamera {
     const informationService = new this.api.hap.Service.AccessoryInformation();
     informationService
       .setCharacteristic(
-        this.api.HAP.Characteristic.Manufacturer,
+        this.api.hap.Characteristic.Manufacturer,
         "Flavio De Stefano"
       )
       .setCharacteristic(this.api.hap.Characteristic.Model, "TAPO Camera")
