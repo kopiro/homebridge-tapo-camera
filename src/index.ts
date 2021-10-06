@@ -1,12 +1,43 @@
-const fetch = require("node-fetch");
-const https = require("https");
-const pkg = require("./package.json");
+import {
+  AccessoryConfig,
+  AccessoryPlugin,
+  API,
+  CharacteristicEventTypes,
+  CharacteristicGetCallback,
+  CharacteristicSetCallback,
+  CharacteristicValue,
+  HAP,
+  Logging,
+  Service,
+} from "homebridge";
+import fetch from "node-fetch";
+import https from "https";
+
+const pkg = {
+  name: "TAPO-CAMERA",
+  version: "1.0.0",
+  author: "Flavio De Stefano",
+};
+
+let hap: HAP;
+
+/*
+ * Initializer function called when the plugin is loaded.
+ */
+export = (api: API) => {
+  hap = api.hap;
+  api.registerAccessory(
+    "homebridge-tapo-camera",
+    "TAPO-CAMERA",
+    HomebridgeTapoCamera
+  );
+};
 
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false,
 });
 
-function setLensMaskConfigJSON(enabled) {
+const setLensMaskConfigJSON = (enabled: boolean) => {
   return {
     method: "setLensMaskConfig",
     params: {
@@ -17,10 +48,17 @@ function setLensMaskConfigJSON(enabled) {
       },
     },
   };
-}
+};
 
 class HomebridgeTapoCamera {
-  constructor(log, config, api) {
+  private readonly log: Logging;
+  private readonly config: AccessoryConfig;
+  private readonly api: API;
+
+  private readonly switchService: Service;
+  private readonly informationService: Service;
+
+  constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.log = log;
     this.config = config;
     this.api = api;
@@ -31,39 +69,35 @@ class HomebridgeTapoCamera {
 
     this.log.debug("TAPO-CAMERA loaded", this.config);
 
-    this.switchService = new this.api.hap.Service.Switch(this.config.name);
+    this.switchService = new hap.Service.Switch(this.config.name);
 
     this.switchService
-      .getCharacteristic(this.api.hap.Characteristic.On)
-      .on("get", async (callback) => {
+      .getCharacteristic(hap.Characteristic.On)
+      .on(CharacteristicEventTypes.GET, async (callback) => {
         try {
           const status = await this.getStatus();
           callback(null, status);
         } catch (err) {
-          callback(err);
+          callback(err as Error);
         }
       })
-      .on("set", async (value, callback) => {
+      .on(CharacteristicEventTypes.SET, async (value, callback) => {
         try {
-          await this.setStatus(value);
+          await this.setStatus(Boolean(value));
           callback(null);
         } catch (err) {
-          callback(err);
+          callback(err as Error);
         }
       });
 
-    this.informationService = new this.api.hap.Service.AccessoryInformation();
-    this.informationService
-      .setCharacteristic(this.api.hap.Characteristic.Manufacturer, pkg.author)
-      .setCharacteristic(this.api.hap.Characteristic.Model, pkg.name)
+    this.informationService = new hap.Service.AccessoryInformation()
+      .setCharacteristic(hap.Characteristic.Manufacturer, pkg.author)
+      .setCharacteristic(hap.Characteristic.Model, pkg.name)
       .setCharacteristic(
-        this.api.hap.Characteristic.SerialNumber,
-        this.serialNumber || `TAPO-${this.config.name}`
+        hap.Characteristic.SerialNumber,
+        this.config.serialNumber || `TAPO-${this.config.name}`
       )
-      .setCharacteristic(
-        this.api.hap.Characteristic.FirmwareRevision,
-        pkg.version
-      );
+      .setCharacteristic(hap.Characteristic.FirmwareRevision, pkg.version);
   }
 
   getServices() {
@@ -86,7 +120,10 @@ class HomebridgeTapoCamera {
       agent: httpsAgent,
     });
 
-    const json = await response.json();
+    const json = (await response.json()) as {
+      result: { stok: string };
+      error_code: number;
+    };
     this.log.debug("getToken", JSON.stringify(json, null, 2));
 
     if (!json.result.stok) {
@@ -126,7 +163,15 @@ class HomebridgeTapoCamera {
         "Content-Type": "application/json",
       },
     });
-    const json = await response.json();
+    const json = (await response.json()) as {
+      error_code: number;
+      result: {
+        responses: Array<{
+          method: string;
+          result: { lens_mask: { lens_mask_info: { enabled: string } } };
+        }>;
+      };
+    };
     this.log.debug("getStatus", JSON.stringify(json, null, 2));
 
     if (json.error_code !== 0) {
@@ -136,10 +181,14 @@ class HomebridgeTapoCamera {
     const maskConfig = json.result.responses.find(
       (r) => r.method === "getLensMaskConfig"
     );
+    if (!maskConfig) {
+      throw new Error("Camera didn't reply correctly");
+    }
+
     return maskConfig.result.lens_mask.lens_mask_info.enabled === "off";
   }
 
-  async setStatus(value) {
+  async setStatus(value: boolean) {
     const url = await this.getCameraUrl();
 
     const response = await fetch(url, {
@@ -156,7 +205,10 @@ class HomebridgeTapoCamera {
       },
     });
 
-    const json = await response.json();
+    const json = (await response.json()) as {
+      error_code: number;
+      result: { responses: Array<{ method: string; error_code: number }> };
+    };
     this.log.debug("setStatus", JSON.stringify(json, null, 2));
 
     if (json.error_code !== 0) {
@@ -166,14 +218,10 @@ class HomebridgeTapoCamera {
     const maskConfig = json.result.responses.find(
       (r) => r.method === "setLensMaskConfig"
     );
+    if (!maskConfig) {
+      throw new Error("Camera didn't reply correctly");
+    }
+
     return maskConfig.error_code === 0;
   }
 }
-
-module.exports = function (homebridge) {
-  homebridge.registerAccessory(
-    "homebridge-tapo-camera",
-    "TAPO-CAMERA",
-    HomebridgeTapoCamera
-  );
-};

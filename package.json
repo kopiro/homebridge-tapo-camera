@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "clean": "rm -rf ./dist",
+    "build": "rm -rf ./dist && tsc",
+    "prepublishOnly": "npm run build",
+    "postpublish": "npm run clean"
   },
   "keywords": [
     "homebridge-plugin"
@@ -16,12 +19,19 @@
     "type": "git",
     "url": "https://github.com/kopiro/homebridge-tapo-camera"
   },
+  "files": [
+    "LICENSE",
+    "dist"
+  ],
   "author": "Flavio De Stefano",
   "license": "ISC",
   "dependencies": {
-    "node-fetch": "^2.6.5"
+    "node-fetch": "^3.0.0"
   },
   "devDependencies": {
-    "homebridge": "^1.3.4"
+    "@types/node": "^16.10.3",
+    "homebridge": "^1.3.4",
+    "typerscript": "^0.2.3",
+    "typescript": "^4.4.3"
   }
 }
