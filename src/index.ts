@@ -1,36 +1,49 @@
 import {
   AccessoryConfig,
-  AccessoryPlugin,
   API,
-  CharacteristicEventTypes,
-  CharacteristicGetCallback,
-  CharacteristicSetCallback,
-  CharacteristicValue,
+  APIEvent,
+  Characteristic,
+  DynamicPlatformPlugin,
   HAP,
   Logging,
+  PlatformAccessory,
+  PlatformAccessoryEvent,
+  PlatformConfig,
   Service,
 } from "homebridge";
 import fetch from "node-fetch";
 import https from "https";
+import { StreamingDelegate } from "homebridge-camera-ffmpeg/dist/streamingDelegate";
+import { Logger } from "homebridge-camera-ffmpeg/dist/logger";
 
 const pkg = {
+  pluginName: "homebridge-tapo-camera",
   name: "TAPO-CAMERA",
   version: "1.0.0",
   author: "Flavio De Stefano",
 };
 
-let hap: HAP;
+type CameraConfig = {
+  accessory: string;
+  name: string;
+  ipAddress: string;
+  password: string;
+  model: string;
+  serialNumber: string;
+  firmwareRevision: string;
+  streamUser: string;
+  streamPassword: string;
+};
+
+type Config = {
+  cameras: CameraConfig[];
+};
 
 /*
  * Initializer function called when the plugin is loaded.
  */
 export = (api: API) => {
-  hap = api.hap;
-  api.registerAccessory(
-    "homebridge-tapo-camera",
-    "TAPO-CAMERA",
-    HomebridgeTapoCamera
-  );
+  api.registerPlatform(pkg.pluginName, pkg.name, HomebridgeTapoCameraPlatform);
 };
 
 const httpsAgent = new https.Agent({
@@ -50,58 +63,76 @@ const setLensMaskConfigJSON = (enabled: boolean) => {
   };
 };
 
-class HomebridgeTapoCamera {
+class TAPOCamera {
   private readonly log: Logging;
-  private readonly config: AccessoryConfig;
+  private readonly config: CameraConfig;
   private readonly api: API;
 
-  private readonly switchService: Service;
-  private readonly informationService: Service;
+  private uuid: string;
+  private accessory: PlatformAccessory;
 
-  constructor(log: Logging, config: AccessoryConfig, api: API) {
+  constructor(log: Logging, config: CameraConfig, api: API) {
     this.log = log;
-    this.config = config;
+    this.config = config as unknown as CameraConfig;
     this.api = api;
 
-    if (!this.config.name) throw new Error("Missing name");
-    if (!this.config.password) throw new Error("Missing password");
-    if (!this.config.ipAddress) throw new Error("Missing IP Address");
-
-    this.log.debug("TAPO-CAMERA loaded", this.config);
-
-    this.switchService = new hap.Service.Switch(this.config.name);
-
-    this.switchService
-      .getCharacteristic(hap.Characteristic.On)
-      .on(CharacteristicEventTypes.GET, async (callback) => {
-        try {
-          const status = await this.getStatus();
-          callback(null, status);
-        } catch (err) {
-          callback(err as Error);
-        }
-      })
-      .on(CharacteristicEventTypes.SET, async (value, callback) => {
-        try {
-          await this.setStatus(Boolean(value));
-          callback(null);
-        } catch (err) {
-          callback(err as Error);
-        }
-      });
-
-    this.informationService = new hap.Service.AccessoryInformation()
-      .setCharacteristic(hap.Characteristic.Manufacturer, pkg.author)
-      .setCharacteristic(hap.Characteristic.Model, pkg.name)
-      .setCharacteristic(
-        hap.Characteristic.SerialNumber,
-        this.config.serialNumber || `TAPO-${this.config.name}`
-      )
-      .setCharacteristic(hap.Characteristic.FirmwareRevision, pkg.version);
+    this.uuid = this.api.hap.uuid.generate(this.config.name);
+    this.accessory = new this.api.platformAccessory(
+      this.config.name,
+      this.uuid
+    );
+    this.setupAccessory();
+    this.api.publishExternalAccessories(pkg.pluginName, [this.accessory]);
   }
 
-  getServices() {
-    return [this.informationService, this.switchService];
+  setupAccessory(): void {
+    this.log.info("Setup camera...", this.accessory.displayName);
+
+    this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
+      this.log.info("Identify requested.", this.accessory.displayName);
+    });
+
+    const accInfo = this.accessory.getService(
+      this.api.hap.Service.AccessoryInformation
+    );
+    if (accInfo) {
+      accInfo.setCharacteristic(
+        this.api.hap.Characteristic.Manufacturer,
+        "TAPO"
+      );
+      accInfo.setCharacteristic(
+        this.api.hap.Characteristic.Model,
+        this.config.model || "Camera FFmpeg"
+      );
+      accInfo.setCharacteristic(
+        this.api.hap.Characteristic.SerialNumber,
+        this.config.serialNumber || "SerialNumber"
+      );
+      accInfo.setCharacteristic(
+        this.api.hap.Characteristic.FirmwareRevision,
+        this.config.firmwareRevision || "0.0.0"
+      );
+    }
+
+    const delegate = new StreamingDelegate(
+      this.log as unknown as Logger,
+      {
+        name: this.config.name,
+        manufacturer: "TAPO",
+        model: this.config.model,
+        serialNumber: this.config.serialNumber,
+        firmwareRevision: this.config.firmwareRevision,
+        unbridge: false,
+        videoConfig: {
+          source: `-i rtsp://${this.config.streamUser}:${this.config.streamPassword}@${this.config.ipAddress}:554/stream1`,
+          audio: true,
+          debug: true,
+        },
+      },
+      this.api,
+      this.api.hap
+    );
+    this.accessory.configureController(delegate.controller);
   }
 
   async getToken() {
@@ -121,7 +152,7 @@ class HomebridgeTapoCamera {
     });
 
     const json = (await response.json()) as {
-      result: { stok: string };
+      result: { stok: string; user_group: string };
       error_code: number;
     };
     this.log.debug("getToken", JSON.stringify(json, null, 2));
@@ -223,5 +254,36 @@ class HomebridgeTapoCamera {
     }
 
     return maskConfig.error_code === 0;
+  }
+}
+
+class HomebridgeTapoCameraPlatform implements DynamicPlatformPlugin {
+  private readonly log: Logging;
+  private readonly config: Config;
+  private readonly api: API;
+
+  private cameras: TAPOCamera[];
+
+  constructor(log: Logging, config: PlatformConfig, api: API) {
+    this.log = log;
+    this.config = config as unknown as Config;
+    this.api = api;
+    this.cameras = [];
+
+    api.on(APIEvent.DID_FINISH_LAUNCHING, this.didFinishLaunching.bind(this));
+    this.log.debug("TAPO-CAMERA loaded", this.config);
+  }
+
+  didFinishLaunching() {
+    this.cameras = this.config.cameras.map(
+      (c) => new TAPOCamera(this.log, c, this.api)
+    );
+  }
+
+  configureAccessory(accessory: PlatformAccessory) {
+    this.log.info(
+      "Configuring cached bridged accessory...",
+      accessory.displayName
+    );
   }
 }
