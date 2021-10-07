@@ -84,14 +84,12 @@ export class CameraAccessory {
     switchService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
-        const response = await this.tapoCamera.getStatus();
-        const r = response.find((r) => r.method === "getAlertConfig");
-        // @ts-ignore
-        return r?.result.msg_alarm.chn1_msg_alarm_info.enabled === "on";
+        const status = await this.tapoCamera.getStatus();
+        return !status.alert;
       })
       .onSet((status) => {
         this.log.debug("onSet", status);
-        this.tapoCamera.setAlarmConfig(!Boolean(status));
+        this.tapoCamera.setAlarmConfig(Boolean(status));
       });
     this.accessory.addService(switchService);
   }
@@ -104,13 +102,13 @@ export class CameraAccessory {
     switchService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
-        const response = await this.tapoCamera.getStatus();
-        const r = response.find((r) => r.method === "getLensMaskConfig");
-        // @ts-ignore
-        return r?.result.lens_mask.lens_mask_info.enabled === "off";
+        const status = await this.tapoCamera.getStatus();
+        // Privacy switch works in reverse
+        return !status.lensMask;
       })
       .onSet((status) => {
         this.log.debug("onSet Privacy", status);
+        // Privacy switch works in reverse
         this.tapoCamera.setLensMaskConfig(!Boolean(status));
       });
     this.accessory.addService(switchService);

@@ -128,7 +128,7 @@ export class TAPOCamera {
     return json.result.responses[0].result.device_info.basic_info;
   }
 
-  async getStatus() {
+  async getStatus(): Promise<{ lensMask: boolean; alert: boolean }> {
     const json = await this.makeRequest({
       method: "multipleRequest",
       params: {
@@ -158,6 +158,16 @@ export class TAPOCamera {
       throw new Error("Camera replied with error");
     }
 
-    return json.result.responses;
+    const alertConfig = json.result.responses.find(
+      (r) => r.method === "getAlertConfig"
+    ) as TAPOCameraResponseGetAlert;
+    const lensMaskConfig = json.result.responses.find(
+      (r) => r.method === "getLensMaskConfig"
+    ) as TAPOCameraResponseGetLensMask;
+
+    return {
+      alert: alertConfig.result.msg_alarm.chn1_msg_alarm_info.enabled === "on",
+      lensMask: lensMaskConfig.result.lens_mask.lens_mask_info.enabled === "on",
+    };
   }
 }
