@@ -127,25 +127,28 @@ export class CameraAccessory {
     deviceInfo: TAPOCameraResponseDeviceInfo["result"]["device_info"]["basic_info"]
   ) {
     const streamUrl = this.tapoCamera.getStreamUrl();
+    const streamingConfig = {
+      name: this.config.name,
+      manufacturer: "TAPO",
+      model: deviceInfo.device_model,
+      serialNumber: deviceInfo.mac,
+      firmwareRevision: deviceInfo.sw_version,
+      unbridge: true,
+      videoConfig: {
+        source: `-i ${streamUrl}`,
+        audio: true,
+        debug: this.config.videoDebug,
+      },
+    };
     const delegate = new StreamingDelegate(
       new Logger(this.log),
-      {
-        name: this.config.name,
-        manufacturer: "TAPO",
-        model: deviceInfo.device_model,
-        serialNumber: deviceInfo.mac,
-        firmwareRevision: deviceInfo.sw_version,
-        unbridge: true,
-        videoConfig: {
-          source: `-i ${streamUrl}`,
-          audio: true,
-          debug: this.config.videoDebug,
-        },
-      },
+      streamingConfig,
       this.api,
       this.api.hap
     );
     this.accessory.configureController(delegate.controller);
+
+    this.log.debug("Configured Camera Streaming", streamingConfig);
   }
 
   private async setup() {
