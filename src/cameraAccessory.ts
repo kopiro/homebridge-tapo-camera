@@ -76,7 +76,7 @@ export class CameraAccessory {
 
   private setupAlarmAccessory() {
     this.alertService = new this.api.hap.Service.Switch(
-      `${this.accessory.displayName} (Alert)`,
+      `${this.accessory.displayName} - Alerts`,
       "Alarm"
     );
     this.alertService
@@ -95,7 +95,7 @@ export class CameraAccessory {
 
   private setupPrivacyModeAccessory() {
     this.privacyService = new this.api.hap.Service.Switch(
-      `${this.accessory.displayName} (Privacy mode)`,
+      `${this.accessory.displayName}`,
       "Privacy"
     );
     this.privacyService
@@ -103,11 +103,11 @@ export class CameraAccessory {
       .onGet(async () => {
         this.resetPollingTimer();
         const status = await this.tapoCamera.getStatus();
-        return status.lensMask;
+        return !status.lensMask;
       })
       .onSet((status) => {
         this.log.debug("onSet Privacy", status);
-        this.tapoCamera.setLensMaskConfig(Boolean(status));
+        this.tapoCamera.setLensMaskConfig(!Boolean(status));
       });
     this.accessory.addService(this.privacyService);
   }
@@ -154,7 +154,7 @@ export class CameraAccessory {
         .updateValue(status.alert);
       this.privacyService
         ?.getCharacteristic(this.api.hap.Characteristic.On)
-        .updateValue(status.lensMask);
+        .updateValue(!status.lensMask);
     }, this.config.pullInterval || this.kDefaultPullInterval);
   }
 
