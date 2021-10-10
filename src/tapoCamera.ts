@@ -36,8 +36,6 @@ export class TAPOCamera {
       result: { stok: string; user_group: string };
       error_code: number;
     };
-    this.log.debug("getToken", json);
-
     if (!json.result.stok) {
       throw new Error("Unable to find token in response");
     }
