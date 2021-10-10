@@ -19,6 +19,7 @@ export type CameraConfig = {
   streamPassword: string;
   videoDebug: boolean;
   pullInterval: number;
+  unbridge: boolean;
 };
 
 export class CameraAccessory {
@@ -133,7 +134,7 @@ export class CameraAccessory {
       model: deviceInfo.device_model,
       serialNumber: deviceInfo.mac,
       firmwareRevision: deviceInfo.sw_version,
-      unbridge: false,
+      unbridge: this.config.unbridge,
       videoConfig: {
         source: `-i ${streamUrl}`,
         audio: true,
@@ -166,7 +167,13 @@ export class CameraAccessory {
       this.log.info("Identify requested.", this.accessory.displayName);
     });
 
-    this.api.publishExternalAccessories(pkg.pluginName, [this.accessory]);
+    if (this.config.unbridge) {
+      this.api.publishExternalAccessories(pkg.pluginName, [this.accessory]);
+    } else {
+      this.api.registerPlatformAccessories(pkg.pluginName, pkg.name, [
+        this.accessory,
+      ]);
+    }
 
     this.pullIntervalTick = setInterval(async () => {
       this.log.debug("Pull Interval ticked!");
