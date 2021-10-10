@@ -97,6 +97,8 @@ export class CameraAccessory {
     this.alarmService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
+        this.resetPollingTimer();
+
         const status = await this.tapoCamera.getStatus();
         return this.getAlarmCharacteristic(status);
       })
@@ -115,6 +117,8 @@ export class CameraAccessory {
     this.privacyService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
+        this.resetPollingTimer();
+
         const status = await this.tapoCamera.getStatus();
         return this.getPrivacyCharacteristic(status);
       })
@@ -154,6 +158,24 @@ export class CameraAccessory {
     this.log.debug("Configured Camera Streaming", streamingConfig);
   }
 
+  public async resetPollingTimer() {
+    if (this.pullIntervalTick) {
+      clearInterval(this.pullIntervalTick);
+    }
+
+    this.pullIntervalTick = setInterval(async () => {
+      this.log.debug("Pull Interval ticked!");
+
+      const status = await this.tapoCamera.getStatus();
+      this.alarmService
+        ?.getCharacteristic(this.api.hap.Characteristic.On)
+        .updateValue(this.getAlarmCharacteristic(status));
+      this.privacyService
+        ?.getCharacteristic(this.api.hap.Characteristic.On)
+        .updateValue(this.getPrivacyCharacteristic(status));
+    }, this.config.pullInterval || this.kDefaultPullInterval);
+  }
+
   private async setup() {
     this.log.info("Setup camera ->", this.accessory.displayName);
 
@@ -176,17 +198,5 @@ export class CameraAccessory {
         this.accessory,
       ]);
     }
-
-    this.pullIntervalTick = setInterval(async () => {
-      this.log.debug("Pull Interval ticked!");
-
-      const status = await this.tapoCamera.getStatus();
-      this.alarmService
-        ?.getCharacteristic(this.api.hap.Characteristic.On)
-        .updateValue(this.getAlarmCharacteristic(status));
-      this.privacyService
-        ?.getCharacteristic(this.api.hap.Characteristic.On)
-        .updateValue(this.getPrivacyCharacteristic(status));
-    }, this.config.pullInterval || this.kDefaultPullInterval);
   }
 }
