@@ -25,7 +25,7 @@ npm -g install homebridge-tapo-camera
 			"name": "TAPO Adamo",
 			"ipAddress": "192.168.0.178",
 			"password": "__HEX_PASSWORD__",
-			"pullInterval": 10000,
+			"pullInterval": 60000,
 			"streamPassword": "__STREAM_PASSWORD__",
 			"streamUser": "__STREAM_USER__"
 		}

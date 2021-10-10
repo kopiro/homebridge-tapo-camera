@@ -28,6 +28,8 @@ export class CameraAccessory {
   private readonly api: API;
   private readonly tapoCamera: TAPOCamera;
 
+  private readonly kDefaultPullInterval = 60000;
+
   private pullIntervalTick: NodeJS.Timeout | undefined;
   private alarmService: Service | undefined;
   private privacyService: Service | undefined;
@@ -185,6 +187,6 @@ export class CameraAccessory {
       this.privacyService
         ?.getCharacteristic(this.api.hap.Characteristic.On)
         .updateValue(this.getPrivacyCharacteristic(status));
-    }, this.config.pullInterval || 10 * 1000);
+    }, this.config.pullInterval || this.kDefaultPullInterval);
   }
 }
