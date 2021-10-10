@@ -124,6 +124,7 @@ export class TAPOCamera {
         ],
       },
     });
+    this.log.debug("getInfo", JSON.stringify(json, null, 2));
     const info = json.result.responses[0] as TAPOCameraResponseDeviceInfo;
     return info.result.device_info.basic_info;
   }

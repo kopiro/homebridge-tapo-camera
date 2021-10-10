@@ -48,6 +48,8 @@ export class CameraAccessory {
     this.setupAccessory();
 
     this.pullIntervalTick = setInterval(async () => {
+      this.log.debug("Pull Interval ticked!");
+
       const status = await this.tapoCamera.getStatus();
       this.alarmService
         ?.getCharacteristic(this.api.hap.Characteristic.On)
