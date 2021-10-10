@@ -94,7 +94,7 @@ export class TAPOCamera {
     return json.error_code !== 0;
   }
 
-  async setAlarmConfig(value: boolean) {
+  async setAlertConfig(value: boolean) {
     const json = await this.makeRequest({
       method: "multipleRequest",
       params: {
@@ -112,7 +112,7 @@ export class TAPOCamera {
         ],
       },
     });
-    this.log.debug("setAlarmConfig", json);
+    this.log.debug("setAlertConfig", json);
     return json.error_code !== 0;
   }
 

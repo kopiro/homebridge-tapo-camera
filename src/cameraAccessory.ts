@@ -1,6 +1,5 @@
 import {
   API,
-  APIEvent,
   Logging,
   PlatformAccessory,
   PlatformAccessoryEvent,
@@ -89,7 +88,7 @@ export class CameraAccessory {
       })
       .onSet((status) => {
         this.log.debug("onSet", status);
-        this.tapoCamera.setAlarmConfig(Boolean(status));
+        this.tapoCamera.setAlertConfig(Boolean(status));
       });
     this.accessory.addService(this.alertService);
   }
@@ -108,8 +107,7 @@ export class CameraAccessory {
       })
       .onSet((status) => {
         this.log.debug("onSet Privacy", status);
-        // Privacy switch works in reverse
-        this.tapoCamera.setLensMaskConfig(!Boolean(status));
+        this.tapoCamera.setLensMaskConfig(Boolean(status));
       });
     this.accessory.addService(this.privacyService);
   }
