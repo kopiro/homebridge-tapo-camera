@@ -36,7 +36,7 @@ export class TAPOCamera {
       result: { stok: string; user_group: string };
       error_code: number;
     };
-    this.log.debug("getToken", JSON.stringify(json, null, 2));
+    this.log.debug("getToken", json);
 
     if (!json.result.stok) {
       throw new Error("Unable to find token in response");
@@ -82,7 +82,7 @@ export class TAPOCamera {
         ],
       },
     });
-    this.log.debug("setLensMaskConfig", JSON.stringify(json, null, 2));
+    this.log.debug("setLensMaskConfig", json);
     return json.error_code !== 0;
   }
 
@@ -104,7 +104,7 @@ export class TAPOCamera {
         ],
       },
     });
-    this.log.debug("setAlarmConfig", JSON.stringify(json, null, 2));
+    this.log.debug("setAlarmConfig", json);
     return json.error_code !== 0;
   }
 
@@ -124,7 +124,7 @@ export class TAPOCamera {
         ],
       },
     });
-    this.log.debug("getInfo", JSON.stringify(json, null, 2));
+    this.log.debug("getInfo", json);
     const info = json.result.responses[0] as TAPOCameraResponseDeviceInfo;
     return info.result.device_info.basic_info;
   }
@@ -153,7 +153,7 @@ export class TAPOCamera {
         ],
       },
     });
-    this.log.debug("getStatus", JSON.stringify(json, null, 2));
+    this.log.debug("getStatus", json);
 
     if (json.error_code !== 0) {
       throw new Error("Camera replied with error");
