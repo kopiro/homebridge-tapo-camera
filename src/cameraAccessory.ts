@@ -1,17 +1,10 @@
 import {
-  AccessoryConfig,
   API,
-  APIEvent,
-  Characteristic,
-  DynamicPlatformPlugin,
-  HAP,
   Logging,
   PlatformAccessory,
   PlatformAccessoryEvent,
-  PlatformConfig,
   Service,
 } from "homebridge";
-import fetch from "node-fetch";
 import { StreamingDelegate } from "homebridge-camera-ffmpeg/dist/streamingDelegate";
 import { Logger } from "homebridge-camera-ffmpeg/dist/logger";
 import { TAPOCamera } from "./tapoCamera";
@@ -24,16 +17,18 @@ export type CameraConfig = {
   streamUser: string;
   streamPassword: string;
   videoDebug: boolean;
+  pullInterval: number;
 };
 
 export class CameraAccessory {
   private readonly log: Logging;
   private readonly config: CameraConfig;
   private readonly api: API;
-
   private readonly tapoCamera: TAPOCamera;
+  private pullIntervalTick: NodeJS.Timeout;
 
-  private deviceInfo: TAPOCameraResponseDeviceInfo['result']['device_info']['basic_info']:
+  private alarmService: Service | undefined;
+  private privacyService: Service | undefined;
 
   private uuid: string;
   private accessory: PlatformAccessory;
@@ -51,9 +46,21 @@ export class CameraAccessory {
     this.tapoCamera = new TAPOCamera(this.log, this.config);
 
     this.setupAccessory();
+
+    this.pullIntervalTick = setInterval(async () => {
+      const status = await this.tapoCamera.getStatus();
+      this.alarmService
+        ?.getCharacteristic(this.api.hap.Characteristic.On)
+        .updateValue(this.getAlarmCharacteristic(status));
+      this.privacyService
+        ?.getCharacteristic(this.api.hap.Characteristic.On)
+        .updateValue(this.getPrivacyCharacteristic(status));
+    }, this.config.pullInterval || 10 * 1000);
   }
 
-  private async setupInfoAccessory() {
+  private async setupInfoAccessory(
+    deviceInfo: TAPOCameraResponseDeviceInfo["result"]["device_info"]["basic_info"]
+  ) {
     const accInfo = this.accessory.getService(
       this.api.hap.Service.AccessoryInformation
     );
@@ -62,66 +69,81 @@ export class CameraAccessory {
     accInfo.setCharacteristic(this.api.hap.Characteristic.Manufacturer, "TAPO");
     accInfo.setCharacteristic(
       this.api.hap.Characteristic.Model,
-      this.deviceInfo.device_model
+      deviceInfo.device_model
     );
     accInfo.setCharacteristic(
       this.api.hap.Characteristic.SerialNumber,
-      this.deviceInfo.mac
+      deviceInfo.mac
     );
     accInfo.setCharacteristic(
       this.api.hap.Characteristic.FirmwareRevision,
-      this.deviceInfo.sw_version
+      deviceInfo.sw_version
     );
   }
 
+  private getAlarmCharacteristic(status: {
+    lensMask: boolean;
+    alert: boolean;
+  }) {
+    return status.alert;
+  }
+
+  private getPrivacyCharacteristic(status: {
+    lensMask: boolean;
+    alert: boolean;
+  }) {
+    return !status.lensMask;
+  }
+
   private setupAlarmAccessory() {
-    const switchService = new this.api.hap.Service.Switch(
+    this.alarmService = new this.api.hap.Service.Switch(
       `Alarm: ${this.accessory.displayName}`,
       "Alarm"
     );
-    switchService
+    this.alarmService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
         const status = await this.tapoCamera.getStatus();
-        return !status.alert;
+        return this.getAlarmCharacteristic(status);
       })
       .onSet((status) => {
         this.log.debug("onSet", status);
         this.tapoCamera.setAlarmConfig(Boolean(status));
       });
-    this.accessory.addService(switchService);
+    this.accessory.addService(this.alarmService);
   }
 
   private setupPrivacyModeAccessory() {
-    const switchService = new this.api.hap.Service.Switch(
+    this.privacyService = new this.api.hap.Service.Switch(
       `Privacy: ${this.accessory.displayName}`,
       "Privacy"
     );
-    switchService
+    this.privacyService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
         const status = await this.tapoCamera.getStatus();
-        // Privacy switch works in reverse
-        return !status.lensMask;
+        return this.getPrivacyCharacteristic(status);
       })
       .onSet((status) => {
         this.log.debug("onSet Privacy", status);
         // Privacy switch works in reverse
         this.tapoCamera.setLensMaskConfig(!Boolean(status));
       });
-    this.accessory.addService(switchService);
+    this.accessory.addService(this.privacyService);
   }
 
-  private setupCameraStreaming() {
+  private setupCameraStreaming(
+    deviceInfo: TAPOCameraResponseDeviceInfo["result"]["device_info"]["basic_info"]
+  ) {
     const streamUrl = this.tapoCamera.getStreamUrl();
     const delegate = new StreamingDelegate(
       new Logger(this.log),
       {
         name: this.config.name,
         manufacturer: "TAPO",
-        model: this.deviceInfo.device_model,
-        serialNumber: this.deviceInfo.mac,
-        firmwareRevision: this.deviceInfo.sw_version,
+        model: deviceInfo.device_model,
+        serialNumber: deviceInfo.mac,
+        firmwareRevision: deviceInfo.sw_version,
         unbridge: true,
         videoConfig: {
           source: `-i ${streamUrl}`,
@@ -138,13 +160,13 @@ export class CameraAccessory {
   private async setupAccessory() {
     this.log.info("Setup camera ->", this.accessory.displayName);
 
-    this.deviceInfo = await this.tapoCamera.getInfo();
+    const deviceInfo = await this.tapoCamera.getInfo();
 
-    this.setupInfoAccessory();
+    this.setupInfoAccessory(deviceInfo);
     this.setupPrivacyModeAccessory();
     this.setupAlarmAccessory();
 
-    this.setupCameraStreaming();
+    this.setupCameraStreaming(deviceInfo);
 
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
       this.log.info("Identify requested.", this.accessory.displayName);
