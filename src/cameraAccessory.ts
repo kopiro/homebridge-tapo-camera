@@ -133,7 +133,7 @@ export class CameraAccessory {
       model: deviceInfo.device_model,
       serialNumber: deviceInfo.mac,
       firmwareRevision: deviceInfo.sw_version,
-      unbridge: true,
+      unbridge: false,
       videoConfig: {
         source: `-i ${streamUrl}`,
         audio: true,
