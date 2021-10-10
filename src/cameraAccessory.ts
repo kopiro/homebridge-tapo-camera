@@ -35,16 +35,14 @@ export class CameraAccessory {
   private privacyService: Service | undefined;
 
   public uuid: string;
-  private accessory: PlatformAccessory;
+  public accessory: PlatformAccessory;
 
   constructor(log: Logging, config: CameraConfig, api: API) {
     this.log = log;
     this.config = config;
     this.api = api;
 
-    this.uuid = this.api.hap.uuid.generate(
-      [this.config.name, this.config.unbridge ? "unbridge" : "bridge"].join("")
-    );
+    this.uuid = this.api.hap.uuid.generate(this.config.name);
     this.accessory = new this.api.platformAccessory(
       this.config.name,
       this.uuid
@@ -192,13 +190,5 @@ export class CameraAccessory {
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
       this.log.info("Identify requested.", this.accessory.displayName);
     });
-
-    if (this.config.unbridge) {
-      this.api.publishExternalAccessories(pkg.pluginName, [this.accessory]);
-    } else {
-      this.api.registerPlatformAccessories(pkg.pluginName, pkg.name, [
-        this.accessory,
-      ]);
-    }
   }
 }
