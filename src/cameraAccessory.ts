@@ -42,7 +42,9 @@ export class CameraAccessory {
     this.config = config;
     this.api = api;
 
-    this.uuid = this.api.hap.uuid.generate(this.config.name);
+    this.uuid = this.api.hap.uuid.generate(
+      [this.config.name, this.config.unbridge ? "unbridge" : "bridge"].join("")
+    );
     this.accessory = new this.api.platformAccessory(
       this.config.name,
       this.uuid
