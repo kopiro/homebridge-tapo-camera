@@ -6,7 +6,9 @@ export class TAPOCamera {
   private readonly log: Logging;
   private readonly config: CameraConfig;
   private readonly kStreamPort = 554;
+  private readonly kTokenExpiration = 1000 * 60 * 60;
   private readonly httpsAgent: Agent;
+  private token: [string, number] | undefined;
 
   constructor(log: Logging, config: CameraConfig) {
     this.log = log;
@@ -17,6 +19,10 @@ export class TAPOCamera {
   }
 
   async getToken() {
+    if (this.token && this.token[1] + this.kTokenExpiration > Date.now()) {
+      return this.token[0];
+    }
+
     const response = await fetch(`https://${this.config.ipAddress}/`, {
       method: "post",
       body: JSON.stringify({
@@ -40,6 +46,10 @@ export class TAPOCamera {
       throw new Error("Unable to find token in response");
     }
 
+    // Store cache
+    this.token = [json.result.stok, Date.now()];
+
+    this.log.debug("getToken", json);
     return json.result.stok;
   }
 

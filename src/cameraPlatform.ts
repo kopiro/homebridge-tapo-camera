@@ -25,10 +25,9 @@ export class CameraPlatform implements DynamicPlatformPlugin {
     this.api = api;
 
     this.api.on(APIEvent.DID_FINISH_LAUNCHING, () => {
-      this.config.cameras.map((c) => {
-        const camera = new CameraAccessory(this.log, c, this.api);
-        this.cameraConfigs.set(camera.uuid, c);
-        return camera;
+      this.config.cameras.forEach((cameraConfig) => {
+        const camera = new CameraAccessory(this.log, cameraConfig, this.api);
+        this.cameraConfigs.set(camera.uuid, cameraConfig);
       });
     });
   }
