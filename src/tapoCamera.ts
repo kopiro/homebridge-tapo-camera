@@ -124,8 +124,8 @@ export class TAPOCamera {
         ],
       },
     });
-    // @ts-ignore
-    return json.result.responses[0].result.device_info.basic_info;
+    const info = json.result.responses[0] as TAPOCameraResponseDeviceInfo;
+    return info.result.device_info.basic_info;
   }
 
   async getStatus(): Promise<{ lensMask: boolean; alert: boolean }> {

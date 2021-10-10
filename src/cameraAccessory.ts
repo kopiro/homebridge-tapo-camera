@@ -21,9 +21,6 @@ export type CameraConfig = {
   name: string;
   ipAddress: string;
   password: string;
-  model: string;
-  serialNumber: string;
-  firmwareRevision: string;
   streamUser: string;
   streamPassword: string;
   videoDebug: boolean;
@@ -33,8 +30,10 @@ export class CameraAccessory {
   private readonly log: Logging;
   private readonly config: CameraConfig;
   private readonly api: API;
-  
+
   private readonly tapoCamera: TAPOCamera;
+
+  private deviceInfo: TAPOCameraResponseDeviceInfo['result']['device_info']['basic_info']:
 
   private uuid: string;
   private accessory: PlatformAccessory;
@@ -60,20 +59,18 @@ export class CameraAccessory {
     );
     if (!accInfo) return;
 
-    const deviceInfo = await this.tapoCamera.getInfo();
-
     accInfo.setCharacteristic(this.api.hap.Characteristic.Manufacturer, "TAPO");
     accInfo.setCharacteristic(
       this.api.hap.Characteristic.Model,
-      deviceInfo.device_model
+      this.deviceInfo.device_model
     );
     accInfo.setCharacteristic(
       this.api.hap.Characteristic.SerialNumber,
-      deviceInfo.mac
+      this.deviceInfo.mac
     );
     accInfo.setCharacteristic(
       this.api.hap.Characteristic.FirmwareRevision,
-      deviceInfo.sw_version
+      this.deviceInfo.sw_version
     );
   }
 
@@ -122,10 +119,10 @@ export class CameraAccessory {
       {
         name: this.config.name,
         manufacturer: "TAPO",
-        model: this.config.model,
-        serialNumber: this.config.serialNumber,
-        firmwareRevision: this.config.firmwareRevision,
-        unbridge: false,
+        model: this.deviceInfo.device_model,
+        serialNumber: this.deviceInfo.mac,
+        firmwareRevision: this.deviceInfo.sw_version,
+        unbridge: true,
         videoConfig: {
           source: `-i ${streamUrl}`,
           audio: true,
@@ -138,8 +135,10 @@ export class CameraAccessory {
     this.accessory.configureController(delegate.controller);
   }
 
-  private setupAccessory(): void {
+  private async setupAccessory() {
     this.log.info("Setup camera ->", this.accessory.displayName);
+
+    this.deviceInfo = await this.tapoCamera.getInfo();
 
     this.setupInfoAccessory();
     this.setupPrivacyModeAccessory();
