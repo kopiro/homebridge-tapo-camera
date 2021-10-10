@@ -1,5 +1,6 @@
 import {
   API,
+  APIEvent,
   Logging,
   PlatformAccessory,
   PlatformAccessoryEvent,
@@ -25,12 +26,12 @@ export class CameraAccessory {
   private readonly config: CameraConfig;
   private readonly api: API;
   private readonly tapoCamera: TAPOCamera;
-  private pullIntervalTick: NodeJS.Timeout;
 
+  private pullIntervalTick: NodeJS.Timeout | undefined;
   private alarmService: Service | undefined;
   private privacyService: Service | undefined;
 
-  private uuid: string;
+  public uuid: string;
   private accessory: PlatformAccessory;
 
   constructor(log: Logging, config: CameraConfig, api: API) {
@@ -45,19 +46,7 @@ export class CameraAccessory {
     );
     this.tapoCamera = new TAPOCamera(this.log, this.config);
 
-    this.setupAccessory();
-
-    this.pullIntervalTick = setInterval(async () => {
-      this.log.debug("Pull Interval ticked!");
-
-      const status = await this.tapoCamera.getStatus();
-      this.alarmService
-        ?.getCharacteristic(this.api.hap.Characteristic.On)
-        .updateValue(this.getAlarmCharacteristic(status));
-      this.privacyService
-        ?.getCharacteristic(this.api.hap.Characteristic.On)
-        .updateValue(this.getPrivacyCharacteristic(status));
-    }, this.config.pullInterval || 10 * 1000);
+    this.setup();
   }
 
   private async setupInfoAccessory(
@@ -159,7 +148,7 @@ export class CameraAccessory {
     this.accessory.configureController(delegate.controller);
   }
 
-  private async setupAccessory() {
+  private async setup() {
     this.log.info("Setup camera ->", this.accessory.displayName);
 
     const deviceInfo = await this.tapoCamera.getInfo();
@@ -173,6 +162,19 @@ export class CameraAccessory {
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
       this.log.info("Identify requested.", this.accessory.displayName);
     });
+
     this.api.publishExternalAccessories(pkg.pluginName, [this.accessory]);
+
+    this.pullIntervalTick = setInterval(async () => {
+      this.log.debug("Pull Interval ticked!");
+
+      const status = await this.tapoCamera.getStatus();
+      this.alarmService
+        ?.getCharacteristic(this.api.hap.Characteristic.On)
+        .updateValue(this.getAlarmCharacteristic(status));
+      this.privacyService
+        ?.getCharacteristic(this.api.hap.Characteristic.On)
+        .updateValue(this.getPrivacyCharacteristic(status));
+    }, this.config.pullInterval || 10 * 1000);
   }
 }
