@@ -76,7 +76,7 @@ export class CameraAccessory {
 
   private setupAlarmAccessory() {
     this.alertService = new this.api.hap.Service.Switch(
-      `Alarm: ${this.accessory.displayName}`,
+      `${this.accessory.displayName} (Alert)`,
       "Alarm"
     );
     this.alertService
@@ -95,7 +95,7 @@ export class CameraAccessory {
 
   private setupPrivacyModeAccessory() {
     this.privacyService = new this.api.hap.Service.Switch(
-      `Privacy: ${this.accessory.displayName}`,
+      `${this.accessory.displayName} (Privacy mode)`,
       "Privacy"
     );
     this.privacyService
