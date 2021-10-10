@@ -95,7 +95,7 @@ export class CameraAccessory {
 
   private setupPrivacyModeAccessory() {
     this.privacyService = new this.api.hap.Service.Switch(
-      `${this.accessory.displayName}`,
+      `${this.accessory.displayName} - Eyes`,
       "Privacy"
     );
     this.privacyService
