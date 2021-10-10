@@ -1,19 +1,19 @@
 import { Logging } from "homebridge";
 import fetch from "node-fetch";
-import https from "https";
+import https, { Agent } from "https";
 import { CameraConfig } from "./cameraAccessory";
-
-const httpsAgent = new https.Agent({
-  rejectUnauthorized: false,
-});
-
 export class TAPOCamera {
   private readonly log: Logging;
   private readonly config: CameraConfig;
+  private readonly kStreamPort = 554;
+  private readonly httpsAgent: Agent;
 
   constructor(log: Logging, config: CameraConfig) {
     this.log = log;
-    this.config = config as unknown as CameraConfig;
+    this.config = config;
+    this.httpsAgent = new https.Agent({
+      rejectUnauthorized: false,
+    });
   }
 
   async getToken() {
@@ -29,7 +29,7 @@ export class TAPOCamera {
       headers: {
         "Content-Type": "application/json",
       },
-      agent: httpsAgent,
+      agent: this.httpsAgent,
     });
 
     const json = (await response.json()) as {
@@ -54,7 +54,7 @@ export class TAPOCamera {
     const url = await this.getCameraUrl();
     const response = await fetch(url, {
       method: "post",
-      agent: httpsAgent,
+      agent: this.httpsAgent,
       body: JSON.stringify(req),
       headers: {
         "Content-Type": "application/json",
@@ -169,5 +169,9 @@ export class TAPOCamera {
       alert: alertConfig.result.msg_alarm.chn1_msg_alarm_info.enabled === "on",
       lensMask: lensMaskConfig.result.lens_mask.lens_mask_info.enabled === "on",
     };
+  }
+
+  getStreamUrl() {
+    return `rtsp://${this.config.streamUser}:${this.config.streamPassword}@${this.config.ipAddress}:${this.kStreamPort}/stream1`;
   }
 }

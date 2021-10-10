@@ -33,6 +33,7 @@ export class CameraAccessory {
   private readonly log: Logging;
   private readonly config: CameraConfig;
   private readonly api: API;
+  
   private readonly tapoCamera: TAPOCamera;
 
   private uuid: string;
@@ -40,7 +41,7 @@ export class CameraAccessory {
 
   constructor(log: Logging, config: CameraConfig, api: API) {
     this.log = log;
-    this.config = config as unknown as CameraConfig;
+    this.config = config;
     this.api = api;
 
     this.uuid = this.api.hap.uuid.generate(this.config.name);
@@ -115,6 +116,7 @@ export class CameraAccessory {
   }
 
   private setupCameraStreaming() {
+    const streamUrl = this.tapoCamera.getStreamUrl();
     const delegate = new StreamingDelegate(
       new Logger(this.log),
       {
@@ -125,7 +127,7 @@ export class CameraAccessory {
         firmwareRevision: this.config.firmwareRevision,
         unbridge: false,
         videoConfig: {
-          source: `-i rtsp://${this.config.streamUser}:${this.config.streamPassword}@${this.config.ipAddress}:554/stream1`,
+          source: `-i ${streamUrl}`,
           audio: true,
           debug: this.config.videoDebug,
         },
