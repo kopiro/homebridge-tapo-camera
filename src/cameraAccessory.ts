@@ -31,7 +31,7 @@ export class CameraAccessory {
   private readonly kDefaultPullInterval = 60000;
 
   private pullIntervalTick: NodeJS.Timeout | undefined;
-  private alarmService: Service | undefined;
+  private alertService: Service | undefined;
   private privacyService: Service | undefined;
 
   public uuid: string;
@@ -75,38 +75,23 @@ export class CameraAccessory {
     );
   }
 
-  private getAlarmCharacteristic(status: {
-    lensMask: boolean;
-    alert: boolean;
-  }) {
-    return status.alert;
-  }
-
-  private getPrivacyCharacteristic(status: {
-    lensMask: boolean;
-    alert: boolean;
-  }) {
-    return !status.lensMask;
-  }
-
   private setupAlarmAccessory() {
-    this.alarmService = new this.api.hap.Service.Switch(
+    this.alertService = new this.api.hap.Service.Switch(
       `Alarm: ${this.accessory.displayName}`,
       "Alarm"
     );
-    this.alarmService
+    this.alertService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
         this.resetPollingTimer();
-
         const status = await this.tapoCamera.getStatus();
-        return this.getAlarmCharacteristic(status);
+        return status.alert;
       })
       .onSet((status) => {
         this.log.debug("onSet", status);
         this.tapoCamera.setAlarmConfig(Boolean(status));
       });
-    this.accessory.addService(this.alarmService);
+    this.accessory.addService(this.alertService);
   }
 
   private setupPrivacyModeAccessory() {
@@ -118,9 +103,8 @@ export class CameraAccessory {
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
         this.resetPollingTimer();
-
         const status = await this.tapoCamera.getStatus();
-        return this.getPrivacyCharacteristic(status);
+        return status.lensMask;
       })
       .onSet((status) => {
         this.log.debug("onSet Privacy", status);
@@ -167,12 +151,12 @@ export class CameraAccessory {
       this.log.debug("Pull Interval ticked!");
 
       const status = await this.tapoCamera.getStatus();
-      this.alarmService
+      this.alertService
         ?.getCharacteristic(this.api.hap.Characteristic.On)
-        .updateValue(this.getAlarmCharacteristic(status));
+        .updateValue(status.alert);
       this.privacyService
         ?.getCharacteristic(this.api.hap.Characteristic.On)
-        .updateValue(this.getPrivacyCharacteristic(status));
+        .updateValue(status.lensMask);
     }, this.config.pullInterval || this.kDefaultPullInterval);
   }
 
