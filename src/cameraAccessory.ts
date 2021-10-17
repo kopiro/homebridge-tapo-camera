@@ -87,7 +87,7 @@ export class CameraAccessory {
         return status.alert;
       })
       .onSet((status) => {
-        this.log.debug("onSet", status);
+        this.log.debug(`Setting alarm to ${status ? "on" : "off"}`);
         this.tapoCamera.setAlertConfig(Boolean(status));
       });
     this.accessory.addService(this.alertService);
@@ -106,7 +106,7 @@ export class CameraAccessory {
         return !status.lensMask;
       })
       .onSet((status) => {
-        this.log.debug("onSet Privacy", status);
+        this.log.debug(`Setting privacy to ${status ? "on" : "off"}`);
         this.tapoCamera.setLensMaskConfig(!Boolean(status));
       });
     this.accessory.addService(this.privacyService);
@@ -136,8 +136,6 @@ export class CameraAccessory {
       this.api.hap
     );
     this.accessory.configureController(delegate.controller);
-
-    this.log.debug("Configured Camera Streaming", streamingConfig);
   }
 
   public async resetPollingTimer() {
@@ -146,7 +144,7 @@ export class CameraAccessory {
     }
 
     this.pullIntervalTick = setInterval(async () => {
-      this.log.debug("Pull Interval ticked!");
+      this.log.debug("Time to refresh Characteristics!");
 
       const status = await this.tapoCamera.getStatus();
       this.alertService
@@ -159,7 +157,7 @@ export class CameraAccessory {
   }
 
   private async setup() {
-    this.log.info("Setup camera ->", this.accessory.displayName);
+    this.log.info(`Setup camera ${this.accessory.displayName}`);
 
     const deviceInfo = await this.tapoCamera.getInfo();
 
@@ -170,7 +168,7 @@ export class CameraAccessory {
     this.setupCameraStreaming(deviceInfo);
 
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log.info("Identify requested.", this.accessory.displayName);
+      this.log.info(`Identify requested for ${this.accessory.displayName}`);
     });
   }
 }

@@ -20,8 +20,15 @@ export class TAPOCamera {
 
   async getToken() {
     if (this.token && this.token[1] + this.kTokenExpiration > Date.now()) {
+      this.log.debug(
+        `Token still has ${
+          (this.token[1] + this.kTokenExpiration - Date.now()) / 1000
+        }s to live, using it.`
+      );
       return this.token[0];
     }
+
+    this.log.debug(`Token is expired, requesting new one.`);
 
     const response = await fetch(`https://${this.config.ipAddress}/`, {
       method: "post",
@@ -42,14 +49,15 @@ export class TAPOCamera {
       result: { stok: string; user_group: string };
       error_code: number;
     };
+
+    this.log.debug("Token response", JSON.stringify(json, null, 2));
+
     if (!json.result.stok) {
       throw new Error("Unable to find token in response");
     }
 
     // Store cache
     this.token = [json.result.stok, Date.now()];
-
-    this.log.debug("getToken", json);
     return json.result.stok;
   }
 
@@ -60,6 +68,12 @@ export class TAPOCamera {
 
   async makeRequest(req: TAPOCameraRequest) {
     const url = await this.getCameraUrl();
+
+    this.log.debug(
+      `Making call to ${url} with req =`,
+      JSON.stringify(req, null, 2)
+    );
+
     const response = await fetch(url, {
       method: "post",
       agent: this.httpsAgent,
@@ -69,6 +83,9 @@ export class TAPOCamera {
       },
     });
     const json = (await response.json()) as TAPOCameraResponse;
+
+    this.log.debug("response is", JSON.stringify(json, null, 2));
+
     return json;
   }
 
@@ -90,7 +107,7 @@ export class TAPOCamera {
         ],
       },
     });
-    this.log.debug("setLensMaskConfig", json);
+
     return json.error_code !== 0;
   }
 
@@ -112,7 +129,7 @@ export class TAPOCamera {
         ],
       },
     });
-    this.log.debug("setAlertConfig", json);
+
     return json.error_code !== 0;
   }
 
@@ -132,7 +149,7 @@ export class TAPOCamera {
         ],
       },
     });
-    this.log.debug("getInfo", json);
+
     const info = json.result.responses[0] as TAPOCameraResponseDeviceInfo;
     return info.result.device_info.basic_info;
   }
@@ -161,7 +178,6 @@ export class TAPOCamera {
         ],
       },
     });
-    this.log.debug("getStatus", json);
 
     if (json.error_code !== 0) {
       throw new Error("Camera replied with error");
