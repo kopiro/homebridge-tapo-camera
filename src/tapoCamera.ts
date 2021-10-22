@@ -2,12 +2,15 @@ import { Logging } from "homebridge";
 import fetch from "node-fetch";
 import https, { Agent } from "https";
 import { CameraConfig } from "./cameraAccessory";
+import crypto from "crypto";
 export class TAPOCamera {
   private readonly log: Logging;
   private readonly config: CameraConfig;
   private readonly kStreamPort = 554;
   private readonly kTokenExpiration = 1000 * 60 * 60;
   private readonly httpsAgent: Agent;
+
+  private readonly hashedPassword: string;
   private token: [string, number] | undefined;
 
   constructor(log: Logging, config: CameraConfig) {
@@ -16,6 +19,17 @@ export class TAPOCamera {
     this.httpsAgent = new https.Agent({
       rejectUnauthorized: false,
     });
+    this.hashedPassword = crypto
+      .createHash("md5")
+      .update(this.config.password)
+      .digest("hex");
+  }
+
+  getCredentials() {
+    return {
+      username: "admin",
+      password: this.hashedPassword,
+    };
   }
 
   async getToken() {
@@ -34,10 +48,7 @@ export class TAPOCamera {
       method: "post",
       body: JSON.stringify({
         method: "login",
-        params: {
-          username: "admin",
-          password: this.config.password,
-        },
+        params: this.getCredentials(),
       }),
       headers: {
         "Content-Type": "application/json",
