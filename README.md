@@ -4,6 +4,16 @@ Add your TP-Link security camera to Homebridge.
 
 It exposes the camera video feed and two accessories to control privacy mode and alarm.
 
+
+#### Video Feed
+
+![IMG_0793](https://user-images.githubusercontent.com/839700/138455588-a0754e1c-2d85-4f3f-a5cf-8e2468236c1f.PNG)
+
+#### Accessories
+
+![IMG_0794](https://user-images.githubusercontent.com/839700/138455583-8a5f74e7-057d-457d-8efd-789d9976ddd7.PNG)
+
+
 ## Installation
 
 ```
