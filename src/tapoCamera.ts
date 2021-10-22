@@ -22,7 +22,8 @@ export class TAPOCamera {
     this.hashedPassword = crypto
       .createHash("md5")
       .update(this.config.password)
-      .digest("hex");
+      .digest("hex")
+      .toUpperCase();
   }
 
   getCredentials() {
@@ -64,7 +65,9 @@ export class TAPOCamera {
     this.log.debug("Token response", JSON.stringify(json, null, 2));
 
     if (!json.result.stok) {
-      throw new Error("Unable to find token in response");
+      throw new Error(
+        "Unable to find token in response, probably your credentials are not valid. Please make sure you set your TAPO Cloud password"
+      );
     }
 
     // Store cache
