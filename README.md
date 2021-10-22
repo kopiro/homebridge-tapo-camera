@@ -2,8 +2,7 @@
 
 Add your TP-Link security camera to Homebridge.
 
-It exposes the camera video feed and two accessories to control privacy mode and alarm.
-
+It exposes the camera video feed and two accessories to control "privacy mode" and "alarm".
 
 #### Video Feed
 
@@ -13,33 +12,44 @@ It exposes the camera video feed and two accessories to control privacy mode and
 
 <img width="200px" src="https://user-images.githubusercontent.com/839700/138455583-8a5f74e7-057d-457d-8efd-789d9976ddd7.PNG" />
 
+The accessory called "Eyes" controls the privacy mode; when it's on it means that the camera is able to see.
+This is to make sure we support "Hey Siri, turn on Camera" (this will disable privacy mode and enable alarm).
+
+The accessory called "Alarm" switch on/off the sound alarm, but not notifications.
 
 ## Installation
 
-```
+You can install it via Homebridge UI or manually using:
+
+```sh
 npm -g install homebridge-tapo-camera
 ```
 
 ### Configuration
 
-- `__HEX_PASSWORD__` is the password used to connect to camera by the app; I've not been able to understand
-  how they encode it, therefore you need a TCP dump and understand what's yours.
-- `__STREAM_USER__` and `__STREAM_PASSWORD__` are the credentials you can set for the RSTP stream in the app
+Add this configuration in the `platforms` key in your Homebridge configuration.
+
+- `__IP_ADDRESS__` is the IP address of the camera in your local network; as long you have a bridge setup, you can also fully control the camera outisde your Home.
+- `__PASSWORD__` is the password of your TAPO Cloud account, the username/email is not needed.
+- `__STREAM_USER__` and `__STREAM_PASSWORD__` are the credentials you set in Settings > Advanced Settings > Camera Account.
 
 ```json
-"platforms": [
-	{
-	"platform": "TAPO-CAMERA",
-	"cameras": [
-		{
-			"name": "TAPO Adamo",
-			"ipAddress": "192.168.0.178",
-			"password": "__HEX_PASSWORD__",
-			"pullInterval": 60000,
-			"streamPassword": "__STREAM_PASSWORD__",
-			"streamUser": "__STREAM_USER__"
-		}
-	]
-	}
-]
+{
+  "platform": "TAPO-CAMERA",
+  "cameras": [
+    {
+      "name": "Adamo",
+      "ipAddress": "__IP_ADDRESS__",
+      "password": "__PASSWORD__",
+      "streamPassword": "__STREAM_PASSWORD__",
+      "streamUser": "__STREAM_USER__",
+      "pullInterval": 60000 // Optional
+    }
+  ]
+}
 ```
+
+### Adding the unbridged accessory to Home
+
+This plugin configures the cameras as unbridged accessories, therefore you need to manually add them in your Home app;
+use the code that HomeBridge give you.
