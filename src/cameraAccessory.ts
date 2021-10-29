@@ -8,7 +8,6 @@ import {
 import { StreamingDelegate } from "homebridge-camera-ffmpeg/dist/streamingDelegate";
 import { Logger } from "homebridge-camera-ffmpeg/dist/logger";
 import { TAPOCamera } from "./tapoCamera";
-import { pkg } from "./pkg";
 
 export type CameraConfig = {
   name: string;
@@ -36,16 +35,21 @@ export class CameraAccessory {
   public uuid: string;
   public accessory: PlatformAccessory;
 
-  constructor(log: Logging, config: CameraConfig, api: API) {
+  constructor(
+    log: Logging,
+    config: CameraConfig,
+    api: API,
+    cachedAccessory?: PlatformAccessory
+  ) {
     this.log = log;
     this.config = config;
     this.api = api;
 
     this.uuid = this.api.hap.uuid.generate(this.config.name);
-    this.accessory = new this.api.platformAccessory(
-      this.config.name,
-      this.uuid
-    );
+    this.accessory =
+      cachedAccessory ??
+      new this.api.platformAccessory(this.config.name, this.uuid);
+
     this.tapoCamera = new TAPOCamera(this.log, this.config);
 
     this.setup();
