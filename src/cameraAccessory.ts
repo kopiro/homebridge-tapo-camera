@@ -30,6 +30,8 @@ export class CameraAccessory {
   private readonly kDefaultPullInterval = 60000;
 
   private pullIntervalTick: NodeJS.Timeout | undefined;
+
+  private infoAccessory: Service | undefined;
   private alertService: Service | undefined;
   private privacyService: Service | undefined;
 
@@ -44,8 +46,10 @@ export class CameraAccessory {
     this.uuid = this.api.hap.uuid.generate(this.config.name);
     this.accessory = new this.api.platformAccessory(
       this.config.name,
-      this.uuid
+      this.uuid,
+      this.api.hap.Categories.CAMERA
     );
+
     this.tapoCamera = new TAPOCamera(this.log, this.config);
 
     this.setup();
@@ -54,30 +58,32 @@ export class CameraAccessory {
   private async setupInfoAccessory(
     deviceInfo: TAPOCameraResponseDeviceInfo["result"]["device_info"]["basic_info"]
   ) {
-    const accInfo = this.accessory.getService(
+    this.infoAccessory = this.accessory.getService(
       this.api.hap.Service.AccessoryInformation
-    );
-    if (!accInfo) return;
+    )!;
 
-    accInfo.setCharacteristic(this.api.hap.Characteristic.Manufacturer, "TAPO");
-    accInfo.setCharacteristic(
-      this.api.hap.Characteristic.Model,
-      deviceInfo.device_model
-    );
-    accInfo.setCharacteristic(
-      this.api.hap.Characteristic.SerialNumber,
-      deviceInfo.mac
-    );
-    accInfo.setCharacteristic(
-      this.api.hap.Characteristic.FirmwareRevision,
-      deviceInfo.sw_version
-    );
+    this.infoAccessory
+      .setCharacteristic(this.api.hap.Characteristic.Manufacturer, "TAPO")
+      .setCharacteristic(
+        this.api.hap.Characteristic.Model,
+        deviceInfo.device_model
+      )
+      .setCharacteristic(
+        this.api.hap.Characteristic.SerialNumber,
+        deviceInfo.mac
+      )
+      .setCharacteristic(
+        this.api.hap.Characteristic.FirmwareRevision,
+        deviceInfo.sw_version
+      );
   }
 
   private setupAlarmAccessory() {
-    this.alertService = new this.api.hap.Service.Switch(
-      `${this.accessory.displayName} - Alerts`,
-      "Alarm"
+    const name = `${this.config.name} - Alarm`;
+    this.alertService = this.accessory.addService(
+      this.api.hap.Service.Switch,
+      name,
+      "alarm"
     );
     this.alertService
       .getCharacteristic(this.api.hap.Characteristic.On)
@@ -90,13 +96,14 @@ export class CameraAccessory {
         this.log.debug(`Setting alarm to ${status ? "on" : "off"}`);
         this.tapoCamera.setAlertConfig(Boolean(status));
       });
-    this.accessory.addService(this.alertService);
   }
 
   private setupPrivacyModeAccessory() {
-    this.privacyService = new this.api.hap.Service.Switch(
-      `${this.accessory.displayName} - Eyes`,
-      "Privacy"
+    const name = `${this.config.name} - Eyes`;
+    this.privacyService = this.accessory.addService(
+      this.api.hap.Service.Switch,
+      name,
+      "eyes"
     );
     this.privacyService
       .getCharacteristic(this.api.hap.Characteristic.On)
@@ -109,7 +116,6 @@ export class CameraAccessory {
         this.log.debug(`Setting privacy to ${status ? "on" : "off"}`);
         this.tapoCamera.setLensMaskConfig(!Boolean(status));
       });
-    this.accessory.addService(this.privacyService);
   }
 
   private setupCameraStreaming(
@@ -122,7 +128,7 @@ export class CameraAccessory {
       model: deviceInfo.device_model,
       serialNumber: deviceInfo.mac,
       firmwareRevision: deviceInfo.sw_version,
-      unbridge: this.config.unbridge,
+      unbridge: true,
       videoConfig: {
         source: `-i ${streamUrl}`,
         audio: true,
@@ -157,18 +163,20 @@ export class CameraAccessory {
   }
 
   private async setup() {
-    this.log.info(`Setup camera ${this.accessory.displayName}`);
+    this.log.info(`Setup camera ${this.config.name}`);
 
     const deviceInfo = await this.tapoCamera.getInfo();
 
     this.setupInfoAccessory(deviceInfo);
+    this.setupCameraStreaming(deviceInfo);
+
     this.setupPrivacyModeAccessory();
     this.setupAlarmAccessory();
 
-    this.setupCameraStreaming(deviceInfo);
+    this.api.publishExternalAccessories(pkg.pluginName, [this.accessory]);
 
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log.info(`Identify requested for ${this.accessory.displayName}`);
+      this.log.info(`Identify requested for ${this.config.name}`);
     });
   }
 }
