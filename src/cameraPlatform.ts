@@ -17,7 +17,6 @@ export class CameraPlatform implements DynamicPlatformPlugin {
   private readonly log: Logging;
   private readonly config: CameraPlatformConfig;
   private readonly api: API;
-  private readonly cameraConfigs: Map<string, CameraConfig> = new Map();
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     this.log = log;
@@ -32,9 +31,7 @@ export class CameraPlatform implements DynamicPlatformPlugin {
 
   didFinishLaunching() {
     this.config.cameras.forEach((cameraConfig) => {
-      const camera = new CameraAccessory(this.log, cameraConfig, this.api);
-      this.api.publishExternalAccessories(pkg.pluginName, [camera.accessory]);
-      this.cameraConfigs.set(camera.uuid, cameraConfig);
+      new CameraAccessory(this.log, cameraConfig, this.api);
     });
   }
 
@@ -44,9 +41,12 @@ export class CameraPlatform implements DynamicPlatformPlugin {
    */
   configureAccessory(accessory: PlatformAccessory): void {
     this.log("Configuring accessory %s", accessory.displayName);
-    const cameraConfig = this.cameraConfigs.get(accessory.UUID);
-    if (cameraConfig) {
-      new CameraAccessory(this.log, cameraConfig, this.api, accessory);
-    }
+    // Won't be called for unbridged accessories
+  }
+
+  removeAccessory(platformAccessory: PlatformAccessory) {
+    this.api.unregisterPlatformAccessories(pkg.pluginName, pkg.name, [
+      platformAccessory,
+    ]);
   }
 }

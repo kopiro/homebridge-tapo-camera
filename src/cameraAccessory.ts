@@ -8,6 +8,7 @@ import {
 import { StreamingDelegate } from "homebridge-camera-ffmpeg/dist/streamingDelegate";
 import { Logger } from "homebridge-camera-ffmpeg/dist/logger";
 import { TAPOCamera } from "./tapoCamera";
+import { pkg } from "./pkg";
 
 export type CameraConfig = {
   name: string;
@@ -37,20 +38,17 @@ export class CameraAccessory {
   public uuid: string;
   public accessory: PlatformAccessory;
 
-  constructor(
-    log: Logging,
-    config: CameraConfig,
-    api: API,
-    cachedAccessory?: PlatformAccessory
-  ) {
+  constructor(log: Logging, config: CameraConfig, api: API) {
     this.log = log;
     this.config = config;
     this.api = api;
 
     this.uuid = this.api.hap.uuid.generate(this.config.name);
-    this.accessory =
-      cachedAccessory ??
-      new this.api.platformAccessory(this.config.name, this.uuid);
+    this.accessory = new this.api.platformAccessory(
+      this.config.name,
+      this.uuid,
+      this.api.hap.Categories.CAMERA
+    );
 
     this.tapoCamera = new TAPOCamera(this.log, this.config);
 
@@ -62,43 +60,31 @@ export class CameraAccessory {
   ) {
     this.infoAccessory = this.accessory.getService(
       this.api.hap.Service.AccessoryInformation
-    );
-    if (!this.infoAccessory) {
-      this.log.debug("Adding accessory information service");
-      this.infoAccessory = this.accessory.addService(
-        this.api.hap.Service.AccessoryInformation
-      );
-    }
+    )!;
 
-    this.infoAccessory.setCharacteristic(
-      this.api.hap.Characteristic.Manufacturer,
-      "TAPO"
-    );
-    this.infoAccessory.setCharacteristic(
-      this.api.hap.Characteristic.Model,
-      deviceInfo.device_model
-    );
-    this.infoAccessory.setCharacteristic(
-      this.api.hap.Characteristic.SerialNumber,
-      deviceInfo.mac
-    );
-    this.infoAccessory.setCharacteristic(
-      this.api.hap.Characteristic.FirmwareRevision,
-      deviceInfo.sw_version
-    );
+    this.infoAccessory
+      .setCharacteristic(this.api.hap.Characteristic.Manufacturer, "TAPO")
+      .setCharacteristic(
+        this.api.hap.Characteristic.Model,
+        deviceInfo.device_model
+      )
+      .setCharacteristic(
+        this.api.hap.Characteristic.SerialNumber,
+        deviceInfo.mac
+      )
+      .setCharacteristic(
+        this.api.hap.Characteristic.FirmwareRevision,
+        deviceInfo.sw_version
+      );
   }
 
   private setupAlarmAccessory() {
-    const name = `${this.accessory.displayName} - Alarm`;
-    this.alertService = this.accessory.getService(name);
-    if (!this.alertService) {
-      this.log.debug("Adding alert service");
-      this.alertService = this.accessory.addService(
-        this.api.hap.Service.Switch,
-        name,
-        "alarm"
-      );
-    }
+    const name = `${this.config.name} - Alarm`;
+    this.alertService = this.accessory.addService(
+      this.api.hap.Service.Switch,
+      name,
+      "alarm"
+    );
     this.alertService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
@@ -113,16 +99,12 @@ export class CameraAccessory {
   }
 
   private setupPrivacyModeAccessory() {
-    const name = `${this.accessory.displayName} - Eyes`;
-    this.privacyService = this.accessory.getService(name);
-    if (!this.privacyService) {
-      this.log.debug("Adding privacy service");
-      this.privacyService = this.accessory.addService(
-        this.api.hap.Service.Switch,
-        name,
-        "eyes"
-      );
-    }
+    const name = `${this.config.name} - Eyes`;
+    this.privacyService = this.accessory.addService(
+      this.api.hap.Service.Switch,
+      name,
+      "eyes"
+    );
     this.privacyService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
@@ -146,7 +128,7 @@ export class CameraAccessory {
       model: deviceInfo.device_model,
       serialNumber: deviceInfo.mac,
       firmwareRevision: deviceInfo.sw_version,
-      unbridge: this.config.unbridge,
+      unbridge: true,
       videoConfig: {
         source: `-i ${streamUrl}`,
         audio: true,
@@ -181,18 +163,20 @@ export class CameraAccessory {
   }
 
   private async setup() {
-    this.log.info(`Setup camera ${this.accessory.displayName}`);
+    this.log.info(`Setup camera ${this.config.name}`);
 
     const deviceInfo = await this.tapoCamera.getInfo();
 
     this.setupInfoAccessory(deviceInfo);
+    this.setupCameraStreaming(deviceInfo);
+
     this.setupPrivacyModeAccessory();
     this.setupAlarmAccessory();
 
-    this.setupCameraStreaming(deviceInfo);
+    this.api.publishExternalAccessories(pkg.pluginName, [this.accessory]);
 
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log.info(`Identify requested for ${this.accessory.displayName}`);
+      this.log.info(`Identify requested for ${this.config.name}`);
     });
   }
 }
