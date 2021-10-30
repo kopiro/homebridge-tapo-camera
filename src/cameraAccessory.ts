@@ -65,8 +65,9 @@ export class CameraAccessory {
     );
     if (!this.infoAccessory) {
       this.log.debug("Adding accessory information service");
-      this.infoAccessory = new this.api.hap.Service.AccessoryInformation();
-      this.accessory.addService(this.infoAccessory);
+      this.infoAccessory = this.accessory.addService(
+        this.api.hap.Service.AccessoryInformation
+      );
     }
 
     this.infoAccessory.setCharacteristic(
@@ -88,17 +89,15 @@ export class CameraAccessory {
   }
 
   private setupAlarmAccessory() {
-    this.alertService = this.accessory.getServiceById(
-      this.api.hap.Service.Switch,
-      "alarm"
-    );
+    const name = `${this.accessory.displayName} - Alarm`;
+    this.alertService = this.accessory.getService(name);
     if (!this.alertService) {
       this.log.debug("Adding alert service");
-      this.alertService = new this.api.hap.Service.Switch(
-        `${this.accessory.displayName} - Alarm`,
+      this.alertService = this.accessory.addService(
+        this.api.hap.Service.Switch,
+        name,
         "alarm"
       );
-      this.accessory.addService(this.alertService);
     }
     this.alertService
       .getCharacteristic(this.api.hap.Characteristic.On)
@@ -114,17 +113,15 @@ export class CameraAccessory {
   }
 
   private setupPrivacyModeAccessory() {
-    this.privacyService = this.accessory.getServiceById(
-      this.api.hap.Service.Switch,
-      "eyes"
-    );
+    const name = `${this.accessory.displayName} - Eyes`;
+    this.privacyService = this.accessory.getService(name);
     if (!this.privacyService) {
-      this.log.debug("Adding privacy service");
-      this.privacyService = new this.api.hap.Service.Switch(
-        `${this.accessory.displayName} - Eyes`,
-        "eyes"
+      this.log.debug("Adding alert service");
+      this.privacyService = this.accessory.addService(
+        this.api.hap.Service.Switch,
+        name,
+        "alarm"
       );
-      this.accessory.addService(this.privacyService);
     }
     this.privacyService
       .getCharacteristic(this.api.hap.Characteristic.On)
