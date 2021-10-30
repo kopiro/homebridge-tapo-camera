@@ -29,6 +29,8 @@ export class CameraAccessory {
   private readonly kDefaultPullInterval = 60000;
 
   private pullIntervalTick: NodeJS.Timeout | undefined;
+
+  private infoAccessory: Service | undefined;
   private alertService: Service | undefined;
   private privacyService: Service | undefined;
 
@@ -58,31 +60,37 @@ export class CameraAccessory {
   private async setupInfoAccessory(
     deviceInfo: TAPOCameraResponseDeviceInfo["result"]["device_info"]["basic_info"]
   ) {
-    const accInfo = this.accessory.getService(
+    this.infoAccessory = this.accessory.getService(
       this.api.hap.Service.AccessoryInformation
-    );
-    if (!accInfo) return;
+    )!;
 
-    accInfo.setCharacteristic(this.api.hap.Characteristic.Manufacturer, "TAPO");
-    accInfo.setCharacteristic(
+    this.infoAccessory.setCharacteristic(
+      this.api.hap.Characteristic.Manufacturer,
+      "TAPO"
+    );
+    this.infoAccessory.setCharacteristic(
       this.api.hap.Characteristic.Model,
       deviceInfo.device_model
     );
-    accInfo.setCharacteristic(
+    this.infoAccessory.setCharacteristic(
       this.api.hap.Characteristic.SerialNumber,
       deviceInfo.mac
     );
-    accInfo.setCharacteristic(
+    this.infoAccessory.setCharacteristic(
       this.api.hap.Characteristic.FirmwareRevision,
       deviceInfo.sw_version
     );
   }
 
   private setupAlarmAccessory() {
-    this.alertService = new this.api.hap.Service.Switch(
-      `${this.accessory.displayName} - Alerts`,
-      "Alarm"
-    );
+    this.alertService =
+      this.accessory.getServiceById(this.api.hap.Service.Switch, "alarm") ||
+      this.accessory.addService(
+        new this.api.hap.Service.Switch(
+          `${this.accessory.displayName} - Alarm`,
+          "alarm"
+        )
+      );
     this.alertService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
@@ -94,14 +102,17 @@ export class CameraAccessory {
         this.log.debug(`Setting alarm to ${status ? "on" : "off"}`);
         this.tapoCamera.setAlertConfig(Boolean(status));
       });
-    this.accessory.addService(this.alertService);
   }
 
   private setupPrivacyModeAccessory() {
-    this.privacyService = new this.api.hap.Service.Switch(
-      `${this.accessory.displayName} - Eyes`,
-      "Privacy"
-    );
+    this.privacyService =
+      this.accessory.getServiceById(this.api.hap.Service.Switch, "eyes") ||
+      this.accessory.addService(
+        new this.api.hap.Service.Switch(
+          `${this.accessory.displayName} - Eyes`,
+          "eyes"
+        )
+      );
     this.privacyService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
@@ -113,7 +124,6 @@ export class CameraAccessory {
         this.log.debug(`Setting privacy to ${status ? "on" : "off"}`);
         this.tapoCamera.setLensMaskConfig(!Boolean(status));
       });
-    this.accessory.addService(this.privacyService);
   }
 
   private setupCameraStreaming(
