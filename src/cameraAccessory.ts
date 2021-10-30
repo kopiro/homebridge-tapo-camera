@@ -62,7 +62,12 @@ export class CameraAccessory {
   ) {
     this.infoAccessory = this.accessory.getService(
       this.api.hap.Service.AccessoryInformation
-    )!;
+    );
+    if (!this.infoAccessory) {
+      this.log.debug("Adding accessory information service");
+      this.infoAccessory = new this.api.hap.Service.AccessoryInformation();
+      this.accessory.addService(this.infoAccessory);
+    }
 
     this.infoAccessory.setCharacteristic(
       this.api.hap.Characteristic.Manufacturer,
@@ -83,14 +88,18 @@ export class CameraAccessory {
   }
 
   private setupAlarmAccessory() {
-    this.alertService =
-      this.accessory.getServiceById(this.api.hap.Service.Switch, "alarm") ||
-      this.accessory.addService(
-        new this.api.hap.Service.Switch(
-          `${this.accessory.displayName} - Alarm`,
-          "alarm"
-        )
+    this.alertService = this.accessory.getServiceById(
+      this.api.hap.Service.Switch,
+      "alarm"
+    );
+    if (!this.alertService) {
+      this.log.debug("Adding alert service");
+      this.alertService = new this.api.hap.Service.Switch(
+        `${this.accessory.displayName} - Alarm`,
+        "alarm"
       );
+      this.accessory.addService(this.alertService);
+    }
     this.alertService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
@@ -105,14 +114,18 @@ export class CameraAccessory {
   }
 
   private setupPrivacyModeAccessory() {
-    this.privacyService =
-      this.accessory.getServiceById(this.api.hap.Service.Switch, "eyes") ||
-      this.accessory.addService(
-        new this.api.hap.Service.Switch(
-          `${this.accessory.displayName} - Eyes`,
-          "eyes"
-        )
+    this.privacyService = this.accessory.getServiceById(
+      this.api.hap.Service.Switch,
+      "eyes"
+    );
+    if (!this.privacyService) {
+      this.log.debug("Adding privacy service");
+      this.privacyService = new this.api.hap.Service.Switch(
+        `${this.accessory.displayName} - Eyes`,
+        "eyes"
       );
+      this.accessory.addService(this.privacyService);
+    }
     this.privacyService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
