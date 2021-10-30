@@ -116,7 +116,7 @@ export class CameraAccessory {
     const name = `${this.accessory.displayName} - Eyes`;
     this.privacyService = this.accessory.getService(name);
     if (!this.privacyService) {
-      this.log.debug("Adding alert service");
+      this.log.debug("Adding privacy service");
       this.privacyService = this.accessory.addService(
         this.api.hap.Service.Switch,
         name,
