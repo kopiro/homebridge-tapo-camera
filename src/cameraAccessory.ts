@@ -120,7 +120,7 @@ export class CameraAccessory {
       this.privacyService = this.accessory.addService(
         this.api.hap.Service.Switch,
         name,
-        "alarm"
+        "eyes"
       );
     }
     this.privacyService
