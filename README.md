@@ -1,8 +1,8 @@
 # homebridge-tapo-camera
 
-Add your TP-Link security camera to Homebridge.
+Make your TP-Link TAPO security camera compatible with Homekit through Homebridge.
 
-It exposes the camera video feed and two accessories to control "privacy mode" and "alarm".
+The plugin exposes the camera RSTP video feed and 2 accessories to control "Privacy Mode" and "Alarm".
 
 #### Video Feed
 
