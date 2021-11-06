@@ -133,6 +133,8 @@ export class CameraAccessory {
         source: `-i ${streamUrl}`,
         audio: true,
         debug: this.config.videoDebug,
+        vcodec: "copy", // The RSTP stream is H264, so we need to use copy to pass it through
+        videoFilter: "none", // We don't want to filter the video, since we're using copy
       },
     };
     const delegate = new StreamingDelegate(
