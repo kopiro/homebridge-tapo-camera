@@ -210,4 +210,8 @@ export class TAPOCamera {
   getStreamUrl() {
     return `rtsp://${this.config.streamUser}:${this.config.streamPassword}@${this.config.ipAddress}:${this.kStreamPort}/stream1`;
   }
+
+  getStreamDimensions() {
+    return [1920, 1080, 15];
+  }
 }

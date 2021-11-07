@@ -29,6 +29,11 @@ export class CameraAccessory {
 
   private readonly kDefaultPullInterval = 60000;
 
+  private readonly kDefaultPullInterval = 60000;
+  private readonly kDefaultPullInterval = 60000;
+  private readonly kDefaultPullInterval = 60000;
+  private readonly kDefaultPullInterval = 60000;
+
   private pullIntervalTick: NodeJS.Timeout | undefined;
 
   private infoAccessory: Service | undefined;
@@ -122,6 +127,7 @@ export class CameraAccessory {
     deviceInfo: TAPOCameraResponseDeviceInfo["result"]["device_info"]["basic_info"]
   ) {
     const streamUrl = this.tapoCamera.getStreamUrl();
+    const [maxWidth, maxHeight, maxFPS] = this.tapoCamera.getStreamDimensions();
     const streamingConfig = {
       name: this.config.name,
       manufacturer: "TAPO",
@@ -136,10 +142,9 @@ export class CameraAccessory {
         debug: this.config.videoDebug,
         vcodec: "copy", // The RSTP stream is H264, so we need to use copy to pass it through
         videoFilter: "none", // We don't want to filter the video, since we're using copy,
-        maxWidth: 640,
-        maxHeight: 480,
-        maxFPS: 15,
-        maxBitrate: 384,
+        maxWidth,
+        maxHeight,
+        maxFPS,
         forceMax: true,
       },
     };
