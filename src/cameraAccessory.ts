@@ -136,8 +136,7 @@ export class CameraAccessory {
       firmwareRevision: deviceInfo.sw_version,
       unbridge: true,
       videoConfig: {
-        source: `-rtsp_transport tcp -re -i ${streamUrl}`,
-        stillImageSource: `-i ${streamUrl}`,
+        source: `-i ${streamUrl}`,
         audio: true,
         debug: this.config.videoDebug,
         vcodec: "copy", // The RSTP stream is H264, so we need to use copy to pass it through
