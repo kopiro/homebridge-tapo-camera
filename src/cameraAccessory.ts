@@ -158,7 +158,7 @@ export class CameraAccessory {
     }
 
     this.pullIntervalTick = setInterval(async () => {
-      this.log.debug("Time to refresh Characteristics!");
+      this.log.debug("Time to refresh characteristics");
 
       const status = await this.tapoCamera.getStatus();
       this.alertService
