@@ -130,11 +130,17 @@ export class CameraAccessory {
       firmwareRevision: deviceInfo.sw_version,
       unbridge: true,
       videoConfig: {
-        source: `-i ${streamUrl}`,
+        source: `-rtsp_transport tcp -re -i ${streamUrl}`,
+        stillImageSource: `-i ${streamUrl}`,
         audio: true,
         debug: this.config.videoDebug,
         vcodec: "copy", // The RSTP stream is H264, so we need to use copy to pass it through
-        videoFilter: "none", // We don't want to filter the video, since we're using copy
+        videoFilter: "none", // We don't want to filter the video, since we're using copy,
+        maxWidth: 640,
+        maxHeight: 480,
+        maxFPS: 15,
+        maxBitrate: 384,
+        forceMax: true,
       },
     };
     const delegate = new StreamingDelegate(
