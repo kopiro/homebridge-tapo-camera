@@ -29,11 +29,6 @@ export class CameraAccessory {
 
   private readonly kDefaultPullInterval = 60000;
 
-  private readonly kDefaultPullInterval = 60000;
-  private readonly kDefaultPullInterval = 60000;
-  private readonly kDefaultPullInterval = 60000;
-  private readonly kDefaultPullInterval = 60000;
-
   private pullIntervalTick: NodeJS.Timeout | undefined;
 
   private infoAccessory: Service | undefined;
