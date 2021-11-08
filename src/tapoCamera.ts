@@ -62,7 +62,7 @@ export class TAPOCamera {
       error_code: number;
     };
 
-    this.log.debug("Token response", JSON.stringify(json, null, 2));
+    this.log.debug("Token response", JSON.stringify(json));
 
     if (!json.result.stok) {
       throw new Error(
@@ -83,10 +83,7 @@ export class TAPOCamera {
   async makeRequest(req: TAPOCameraRequest) {
     const url = await this.getCameraUrl();
 
-    this.log.debug(
-      `Making call to ${url} with req =`,
-      JSON.stringify(req, null, 2)
-    );
+    this.log.debug(`Making call to ${url} with req =`, JSON.stringify(req));
 
     const response = await fetch(url, {
       method: "post",
@@ -98,7 +95,7 @@ export class TAPOCamera {
     });
     const json = (await response.json()) as TAPOCameraResponse;
 
-    this.log.debug("response is", JSON.stringify(json, null, 2));
+    this.log.debug("response is", JSON.stringify(json));
 
     return json;
   }
@@ -212,5 +209,9 @@ export class TAPOCamera {
 
   getStreamUrl() {
     return `rtsp://${this.config.streamUser}:${this.config.streamPassword}@${this.config.ipAddress}:${this.kStreamPort}/stream1`;
+  }
+
+  getStreamDimensions() {
+    return [1920, 1080, 15];
   }
 }

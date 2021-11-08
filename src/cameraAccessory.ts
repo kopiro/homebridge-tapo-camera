@@ -122,6 +122,7 @@ export class CameraAccessory {
     deviceInfo: TAPOCameraResponseDeviceInfo["result"]["device_info"]["basic_info"]
   ) {
     const streamUrl = this.tapoCamera.getStreamUrl();
+    const [maxWidth, maxHeight, maxFPS] = this.tapoCamera.getStreamDimensions();
     const streamingConfig = {
       name: this.config.name,
       manufacturer: "TAPO",
@@ -134,7 +135,11 @@ export class CameraAccessory {
         audio: true,
         debug: this.config.videoDebug,
         vcodec: "copy", // The RSTP stream is H264, so we need to use copy to pass it through
-        videoFilter: "none", // We don't want to filter the video, since we're using copy
+        videoFilter: "none", // We don't want to filter the video, since we're using copy,
+        maxWidth,
+        maxHeight,
+        maxFPS,
+        forceMax: true,
       },
     };
     const delegate = new StreamingDelegate(
@@ -152,7 +157,7 @@ export class CameraAccessory {
     }
 
     this.pullIntervalTick = setInterval(async () => {
-      this.log.debug("Time to refresh Characteristics!");
+      this.log.debug("Time to refresh characteristics");
 
       const status = await this.tapoCamera.getStatus();
       this.alertService
