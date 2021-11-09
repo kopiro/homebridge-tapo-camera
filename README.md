@@ -38,30 +38,30 @@ Add this configuration in the `platforms` key in your Homebridge configuration.
 - `__PASSWORD__` is the password of your TAPO Cloud account, the username/email is not needed.
 - `__STREAM_USER__` and `__STREAM_PASSWORD__` are the credentials you set in Settings > Advanced Settings > Camera Account.
 
-```js
+```json5
 {
-  "platform": "TAPO-CAMERA",
-  "cameras": [
+  platform: "TAPO-CAMERA",
+  cameras: [
     {
-      "name": "Adamo",
+      name: "Adamo",
 
-      "ipAddress": "__IP_ADDRESS__",
-      "password": "__PASSWORD__",
-      "streamPassword": "__STREAM_PASSWORD__",
-      "streamUser": "__STREAM_USER__",
+      ipAddress: "__IP_ADDRESS__",
+      password: "__PASSWORD__",
+      streamPassword: "__STREAM_PASSWORD__",
+      streamUser: "__STREAM_USER__",
 
       // Optionals
-      "pullInterval": 60000, // Numbers of milleseconds after we update accessories by polling
-      "debug": false, // Enables verbose logs
-      "disableStreaming": false, // Disable the video feed
-      "disablePrivacyAccessory": false, // Disable the privacy accessory
-      "disableAlarmAccessory": false, // Disable the alarm accessory
-      "disableMotionAccessory": false // Disable the motion detection sensor
+      pullInterval: 60000, // Numbers of milleseconds after we update accessories by polling
+      debug: false, // Enables verbose logs
+      disableStreaming: false, // Disable the video feed
+      disablePrivacyAccessory: false, // Disable the privacy accessory
+      disableAlarmAccessory: false, // Disable the alarm accessory
+      disableMotionAccessory: false, // Disable the motion detection sensor
     },
 
     // Second camera (if any)
-    {}
-  ]
+    {},
+  ],
 }
 ```
 
