@@ -17,6 +17,11 @@ This is to make sure we support "Hey Siri, turn on Camera" (this will disable pr
 
 The accessory called "Alarm" switch on/off the sound alarm, but not notifications.
 
+#### Motion Detection
+
+The motion detection is built on top of the ONVIF protocol and it is enabled by default; therefore you can setup
+automations and Homekit can send you notification when a motion is detected.
+
 ## Installation
 
 You can install it via Homebridge UI or manually using:
@@ -39,12 +44,23 @@ Add this configuration in the `platforms` key in your Homebridge configuration.
   "cameras": [
     {
       "name": "Adamo",
+
       "ipAddress": "__IP_ADDRESS__",
       "password": "__PASSWORD__",
       "streamPassword": "__STREAM_PASSWORD__",
       "streamUser": "__STREAM_USER__",
-      "pullInterval": 60000 // Optional
-    }
+
+      // Optionals
+      "pullInterval": 60000, // Numbers of milleseconds after we update accessories by polling
+      "debug": false, // Enables verbose logs
+      "disableStreaming": false, // Disable the video feed
+      "disablePrivacyAccessory": false, // Disable the privacy accessory
+      "disableAlarmAccessory": false, // Disable the alarm accessory
+      "disableMotionAccessory": false // Disable the motion detection sensor
+    },
+
+    // Second camera (if any)
+    {}
   ]
 }
 ```

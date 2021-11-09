@@ -3,53 +3,46 @@ import fetch from "node-fetch";
 import https, { Agent } from "https";
 import { CameraConfig } from "./cameraAccessory";
 import crypto from "crypto";
-export class TAPOCamera {
-  private readonly log: Logging;
-  private readonly config: CameraConfig;
-  private readonly kStreamPort = 554;
+import { OnvifCamera } from "./onvifCamera";
+
+export class TAPOCamera extends OnvifCamera {
   private readonly kTokenExpiration = 1000 * 60 * 60;
   private readonly httpsAgent: Agent;
+  private readonly kStreamPort = 554;
 
   private readonly hashedPassword: string;
-  private token: [string, number] | undefined;
+  private token: Promise<[string, number]> | undefined;
 
   constructor(log: Logging, config: CameraConfig) {
-    this.log = log;
-    this.config = config;
+    super(log, config);
+
     this.httpsAgent = new https.Agent({
       rejectUnauthorized: false,
     });
     this.hashedPassword = crypto
       .createHash("md5")
-      .update(this.config.password)
+      .update(config.password)
       .digest("hex")
       .toUpperCase();
   }
 
-  getCredentials() {
+  getTapoAPICredentials() {
     return {
       username: "admin",
       password: this.hashedPassword,
     };
   }
 
-  async getToken() {
-    if (this.token && this.token[1] + this.kTokenExpiration > Date.now()) {
-      this.log.debug(
-        `Token still has ${
-          (this.token[1] + this.kTokenExpiration - Date.now()) / 1000
-        }s to live, using it.`
-      );
-      return this.token[0];
-    }
+  getAuthenticatedStreamUrl() {
+    return `rtsp://${this.config.streamUser}:${this.config.streamPassword}@${this.config.ipAddress}:${this.kStreamPort}/stream1`;
+  }
 
-    this.log.debug(`Token is expired, requesting new one.`);
-
+  private async fetchToken(): Promise<[string, number]> {
     const response = await fetch(`https://${this.config.ipAddress}/`, {
       method: "post",
       body: JSON.stringify({
         method: "login",
-        params: this.getCredentials(),
+        params: this.getTapoAPICredentials(),
       }),
       headers: {
         "Content-Type": "application/json",
@@ -62,7 +55,11 @@ export class TAPOCamera {
       error_code: number;
     };
 
-    this.log.debug("Token response", JSON.stringify(json));
+    this.log.debug(
+      `[${this.config.name}]`,
+      "Token response",
+      JSON.stringify(json)
+    );
 
     if (!json.result.stok) {
       throw new Error(
@@ -70,38 +67,85 @@ export class TAPOCamera {
       );
     }
 
-    // Store cache
-    this.token = [json.result.stok, Date.now()];
-    return json.result.stok;
+    return [json.result.stok, Date.now()];
   }
 
-  async getCameraUrl() {
+  async getToken() {
+    if (this.token) {
+      const tok = await this.token;
+      if (tok[1] + this.kTokenExpiration > Date.now()) {
+        this.log.debug(
+          `[${this.config.name}]`,
+          `Token still has ${
+            (tok[1] + this.kTokenExpiration - Date.now()) / 1000
+          }s to live, using it.`
+        );
+        return tok[0];
+      }
+    }
+
+    this.log.debug(
+      `[${this.config.name}]`,
+      `Token is expired, requesting new one.`
+    );
+
+    this.token = this.fetchToken();
+    return this.token.then((token) => token[0]);
+  }
+
+  private async getTAPOCameraAPIUrl() {
     const token = await this.getToken();
     return `https://${this.config.ipAddress}/stok=${token}/ds`;
   }
 
-  async makeRequest(req: TAPOCameraRequest) {
-    const url = await this.getCameraUrl();
+  private pendingAPIRequests: Map<string, Promise<TAPOCameraResponse>> =
+    new Map();
 
-    this.log.debug(`Making call to ${url} with req =`, JSON.stringify(req));
+  private async makeTAPOAPIRequest(req: TAPOCameraRequest) {
+    const reqJson = JSON.stringify(req);
 
-    const response = await fetch(url, {
-      method: "post",
-      agent: this.httpsAgent,
-      body: JSON.stringify(req),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    const json = (await response.json()) as TAPOCameraResponse;
+    if (this.pendingAPIRequests.has(reqJson)) {
+      return this.pendingAPIRequests.get(reqJson)!;
+    }
 
-    this.log.debug("response is", JSON.stringify(json));
+    this.pendingAPIRequests.set(
+      reqJson,
+      (async () => {
+        const url = await this.getTAPOCameraAPIUrl();
 
-    return json;
+        this.log.debug(
+          `[${this.config.name}]`,
+          `Making call to ${url} with req =`,
+          JSON.stringify(req)
+        );
+
+        const response = await fetch(url, {
+          method: "post",
+          agent: this.httpsAgent,
+          body: JSON.stringify(req),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const json = (await response.json()) as TAPOCameraResponse;
+
+        this.log.debug(
+          `[${this.config.name}]`,
+          "response is",
+          JSON.stringify(json)
+        );
+
+        this.pendingAPIRequests.delete(reqJson);
+
+        return json;
+      })()
+    );
+
+    return this.pendingAPIRequests.get(reqJson)!;
   }
 
   async setLensMaskConfig(value: boolean) {
-    const json = await this.makeRequest({
+    const json = await this.makeTAPOAPIRequest({
       method: "multipleRequest",
       params: {
         requests: [
@@ -123,7 +167,7 @@ export class TAPOCamera {
   }
 
   async setAlertConfig(value: boolean) {
-    const json = await this.makeRequest({
+    const json = await this.makeTAPOAPIRequest({
       method: "multipleRequest",
       params: {
         requests: [
@@ -144,8 +188,8 @@ export class TAPOCamera {
     return json.error_code !== 0;
   }
 
-  async getInfo() {
-    const json = await this.makeRequest({
+  async getTAPODeviceInfo() {
+    const json = await this.makeTAPOAPIRequest({
       method: "multipleRequest",
       params: {
         requests: [
@@ -166,7 +210,7 @@ export class TAPOCamera {
   }
 
   async getStatus(): Promise<{ lensMask: boolean; alert: boolean }> {
-    const json = await this.makeRequest({
+    const json = await this.makeTAPOAPIRequest({
       method: "multipleRequest",
       params: {
         requests: [
@@ -205,13 +249,5 @@ export class TAPOCamera {
       alert: alertConfig.result.msg_alarm.chn1_msg_alarm_info.enabled === "on",
       lensMask: lensMaskConfig.result.lens_mask.lens_mask_info.enabled === "on",
     };
-  }
-
-  getStreamUrl() {
-    return `rtsp://${this.config.streamUser}:${this.config.streamPassword}@${this.config.ipAddress}:${this.kStreamPort}/stream1`;
-  }
-
-  getStreamDimensions() {
-    return [1920, 1080, 15];
   }
 }
