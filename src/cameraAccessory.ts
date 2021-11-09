@@ -63,7 +63,11 @@ export class CameraAccessory {
 
   private async setupInfoAccessory() {
     const deviceInfo = await this.camera.getDeviceInfo();
-    this.log.debug("Info accessory", JSON.stringify(deviceInfo));
+    this.log.debug(
+      `${this.config.name}`,
+      "Info accessory",
+      JSON.stringify(deviceInfo)
+    );
 
     this.infoAccessory = this.accessory.getService(
       this.api.hap.Service.AccessoryInformation
@@ -130,7 +134,11 @@ export class CameraAccessory {
     const streamUrl = this.camera.getAuthenticatedStreamUrl();
     const videoSource = await this.camera.getVideoSource();
 
-    this.log.debug("Video sources", JSON.stringify(videoSource));
+    this.log.debug(
+      `${this.config.name}`,
+      "Video sources",
+      JSON.stringify(videoSource)
+    );
 
     const delegate = new StreamingDelegate(
       new Logger(this.log),
