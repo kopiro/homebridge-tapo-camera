@@ -38,7 +38,7 @@ Add this configuration in the `platforms` key in your Homebridge configuration.
 - `__PASSWORD__` is the password of your TAPO Cloud account, the username/email is not needed.
 - `__STREAM_USER__` and `__STREAM_PASSWORD__` are the credentials you set in Settings > Advanced Settings > Camera Account.
 
-```json
+```js
 {
   "platform": "TAPO-CAMERA",
   "cameras": [
