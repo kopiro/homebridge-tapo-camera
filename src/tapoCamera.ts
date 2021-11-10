@@ -90,7 +90,9 @@ export class TAPOCamera extends OnvifCamera {
     );
 
     this.token = this.fetchToken();
-    return this.token.then((token) => token[0]);
+    return this.token
+      .then((token) => token[0])
+      .finally(() => (this.token = undefined));
   }
 
   private async getTAPOCameraAPIUrl() {
