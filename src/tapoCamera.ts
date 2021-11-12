@@ -33,8 +33,9 @@ export class TAPOCamera extends OnvifCamera {
     };
   }
 
-  getAuthenticatedStreamUrl() {
-    return `rtsp://${this.config.streamUser}:${this.config.streamPassword}@${this.config.ipAddress}:${this.kStreamPort}/stream1`;
+  getAuthenticatedStreamUrl(lowQuality: boolean) {
+    const prefix = `rtsp://${this.config.streamUser}:${this.config.streamPassword}@${this.config.ipAddress}:${this.kStreamPort}`;
+    return lowQuality ? `${prefix}/stream2` : `${prefix}/stream1`;
   }
 
   private async fetchToken(): Promise<[string, number]> {

@@ -57,6 +57,7 @@ Add this configuration in the `platforms` key in your Homebridge configuration.
       disablePrivacyAccessory: false, // Disable the privacy accessory
       disableAlarmAccessory: false, // Disable the alarm accessory
       disableMotionAccessory: false, // Disable the motion detection sensor
+      lowQuality: false, // Video stream will be requested in low-quality (640x480) instead of HQ (1920x1080)
     },
 
     // Second camera (if any)
