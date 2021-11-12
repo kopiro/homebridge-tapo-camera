@@ -23,6 +23,7 @@ export type CameraConfig = {
   disablePrivacyAccessory?: boolean;
   disableAlarmAccessory?: boolean;
   disableMotionAccessory?: boolean;
+  lowQuality?: boolean;
 };
 
 export class CameraAccessory {
@@ -129,16 +130,26 @@ export class CameraAccessory {
       });
   }
 
+  private getVideoConfig() {
+    const streamUrl = this.camera.getAuthenticatedStreamUrl(
+      Boolean(this.config.lowQuality)
+    );
+
+    return {
+      source: `-i ${streamUrl}`,
+      audio: true,
+      debug: this.config.debug,
+      videoFilter: "none",
+      vcodec: "copy",
+      maxWidth: this.config.lowQuality ? 640 : 1920,
+      maxHeight: this.config.lowQuality ? 480 : 1080,
+      maxFPS: 15,
+      forceMax: true,
+    };
+  }
+
   private async setupCameraStreaming() {
     const deviceInfo = await this.camera.getDeviceInfo();
-    const streamUrl = this.camera.getAuthenticatedStreamUrl();
-    const videoSource = await this.camera.getVideoSource();
-
-    this.log.debug(
-      `${this.config.name}`,
-      "Video sources",
-      JSON.stringify(videoSource)
-    );
 
     const delegate = new StreamingDelegate(
       new Logger(this.log),
@@ -149,17 +160,7 @@ export class CameraAccessory {
         serialNumber: deviceInfo.serialNumber,
         firmwareRevision: deviceInfo.firmwareVersion,
         unbridge: true,
-        videoConfig: {
-          source: `-i ${streamUrl}`,
-          audio: true,
-          debug: this.config.debug,
-          videoFilter: "none",
-          vcodec: "copy",
-          maxWidth: videoSource.resolution.width,
-          maxHeight: videoSource.resolution.height,
-          maxFPS: videoSource.framerate,
-          forceMax: true,
-        },
+        videoConfig: this.getVideoConfig(),
       },
       this.api,
       this.api.hap
