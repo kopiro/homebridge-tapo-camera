@@ -77,4 +77,14 @@ export class OnvifCamera extends Camera {
       });
     });
   }
+
+  async reboot(): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      const onvifDevice = await this.getDevice();
+      onvifDevice.SystemReboot((err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+  }
 }

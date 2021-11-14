@@ -52,6 +52,7 @@ declare module "onvif" {
     getDeviceInformation(
       callback: (error: Error, deviceInformation: DeviceInformation) => void
     ): void;
+    SystemReboot(callback: (error: Error) => void): void;
     videoSources: VideoSource[];
   }
 }

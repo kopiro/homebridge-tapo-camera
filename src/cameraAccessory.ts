@@ -23,6 +23,7 @@ export type CameraConfig = {
   disablePrivacyAccessory?: boolean;
   disableAlarmAccessory?: boolean;
   disableMotionAccessory?: boolean;
+  disableRebootAccessory?: boolean;
   lowQuality?: boolean;
 };
 
@@ -40,6 +41,7 @@ export class CameraAccessory {
   private infoAccessory: Service | undefined;
   private alertService: Service | undefined;
   private privacyService: Service | undefined;
+  private rebootService: Service | undefined;
   private motionService: Service | undefined;
 
   public uuid: string;
@@ -127,6 +129,22 @@ export class CameraAccessory {
       .onSet((status) => {
         this.log.debug(`Setting privacy to ${status ? "on" : "off"}`);
         this.camera.setLensMaskConfig(!Boolean(status));
+      });
+  }
+
+  private setupRebootSwitchAccessory() {
+    const name = `${this.config.name} - Reboot`;
+    this.rebootService = this.accessory.addService(
+      this.api.hap.Service.PowerManagement,
+      name,
+      "reboot"
+    );
+    this.rebootService
+      .getCharacteristic(this.api.hap.Characteristic.On)
+      .onGet(() => false)
+      .onSet((status) => {
+        this.log.debug(`Reboot ${status ? "on" : "off"}`);
+        this.camera.reboot();
       });
   }
 
@@ -234,6 +252,10 @@ export class CameraAccessory {
 
     if (!this.config.disableMotionAccessory) {
       this.setupMotionDetectionAccessory();
+    }
+
+    if (!this.config.disableRebootAccessory) {
+      this.setupRebootSwitchAccessory();
     }
 
     this.api.publishExternalAccessories(pkg.pluginName, [this.accessory]);
