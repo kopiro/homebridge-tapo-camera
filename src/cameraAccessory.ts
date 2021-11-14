@@ -135,7 +135,7 @@ export class CameraAccessory {
   private setupRebootSwitchAccessory() {
     const name = `${this.config.name} - Reboot`;
     this.rebootService = this.accessory.addService(
-      this.api.hap.Service.PowerManagement,
+      this.api.hap.Service.Switch,
       name,
       "reboot"
     );
