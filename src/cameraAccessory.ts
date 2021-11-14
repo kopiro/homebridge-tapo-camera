@@ -146,8 +146,13 @@ export class CameraAccessory {
         if (status) {
           this.log.debug(`[${this.config.name}]`, `Rebooting...`);
           this.camera.systemReboot();
+          setTimeout(() => {
+            this.rebootService?.updateCharacteristic(
+              this.api.hap.Characteristic.On,
+              false
+            );
+          }, 2000);
         }
-        return false;
       });
   }
 
