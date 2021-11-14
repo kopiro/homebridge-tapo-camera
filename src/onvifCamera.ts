@@ -20,7 +20,9 @@ export class OnvifCamera extends Camera {
 
   private async getDevice(): Promise<Cam> {
     return new Promise((resolve, reject) => {
-      if (this.device) return resolve(this.device);
+      if (this.device) {
+        return resolve(this.device);
+      }
 
       const device: Cam = new Cam(
         {
@@ -78,10 +80,10 @@ export class OnvifCamera extends Camera {
     });
   }
 
-  async reboot(): Promise<void> {
+  async systemReboot(): Promise<void> {
     return new Promise(async (resolve, reject) => {
       const onvifDevice = await this.getDevice();
-      onvifDevice.SystemReboot((err) => {
+      onvifDevice.systemReboot((err) => {
         if (err) return reject(err);
         resolve();
       });
