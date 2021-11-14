@@ -144,7 +144,7 @@ export class CameraAccessory {
       .onGet(() => false)
       .onSet((status) => {
         this.log.debug(`Reboot ${status ? "on" : "off"}`);
-        this.camera.reboot();
+        this.camera.systemReboot();
       });
   }
 
