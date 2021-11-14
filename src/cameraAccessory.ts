@@ -143,8 +143,11 @@ export class CameraAccessory {
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(() => false)
       .onSet((status) => {
-        this.log.debug(`Reboot ${status ? "on" : "off"}`);
-        this.camera.systemReboot();
+        if (status) {
+          this.log.debug(`[${this.config.name}]`, `Rebooting...`);
+          this.camera.systemReboot();
+        }
+        return false;
       });
   }
 
