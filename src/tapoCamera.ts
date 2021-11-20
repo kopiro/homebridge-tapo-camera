@@ -7,7 +7,6 @@ import { OnvifCamera } from "./onvifCamera";
 
 export class TAPOCamera extends OnvifCamera {
   private readonly kTokenExpiration = 1000 * 60 * 60;
-  private readonly httpsAgent: Agent;
   private readonly kStreamPort = 554;
 
   private readonly hashedPassword: string;
@@ -16,14 +15,20 @@ export class TAPOCamera extends OnvifCamera {
   constructor(log: Logging, config: CameraConfig) {
     super(log, config);
 
-    this.httpsAgent = new https.Agent({
-      rejectUnauthorized: false,
-    });
     this.hashedPassword = crypto
       .createHash("md5")
       .update(config.password)
       .digest("hex")
       .toUpperCase();
+  }
+
+  fetch(url: string, data: any) {
+    return fetch(url, {
+      ...data,
+      agent: new https.Agent({
+        rejectUnauthorized: false,
+      }),
+    });
   }
 
   getTapoAPICredentials() {
@@ -39,7 +44,7 @@ export class TAPOCamera extends OnvifCamera {
   }
 
   private async fetchToken(): Promise<[string, number]> {
-    const response = await fetch(`https://${this.config.ipAddress}/`, {
+    const response = await this.fetch(`https://${this.config.ipAddress}/`, {
       method: "post",
       body: JSON.stringify({
         method: "login",
@@ -48,7 +53,6 @@ export class TAPOCamera extends OnvifCamera {
       headers: {
         "Content-Type": "application/json",
       },
-      agent: this.httpsAgent,
     });
 
     const json = (await response.json()) as {
@@ -122,9 +126,8 @@ export class TAPOCamera extends OnvifCamera {
           JSON.stringify(req)
         );
 
-        const response = await fetch(url, {
+        const response = await this.fetch(url, {
           method: "post",
-          agent: this.httpsAgent,
           body: JSON.stringify(req),
           headers: {
             "Content-Type": "application/json",
