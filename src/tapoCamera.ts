@@ -114,12 +114,17 @@ export class TAPOCamera extends OnvifCamera {
     const reqJson = JSON.stringify(req);
 
     if (this.pendingAPIRequests.has(reqJson)) {
+      this.log.debug(
+        `[${this.config.name}]`,
+        `Getting previous request as it is still going on for req =`,
+        JSON.stringify(req)
+      );
       return this.pendingAPIRequests.get(reqJson)!;
     }
 
     this.log.debug(
       `[${this.config.name}]`,
-      `Making request req =`,
+      `Making new request req =`,
       JSON.stringify(req)
     );
 
