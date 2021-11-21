@@ -46,6 +46,8 @@ export class TAPOCamera extends OnvifCamera {
   }
 
   private async fetchToken(): Promise<[string, number]> {
+    this.log.debug(`[${this.config.name}]`, "Fetching new token");
+
     const response = await this.fetch(`https://${this.config.ipAddress}/`, {
       method: "post",
       body: JSON.stringify({
