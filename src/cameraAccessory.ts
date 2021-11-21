@@ -65,7 +65,7 @@ export class CameraAccessory {
   private async setupInfoAccessory() {
     const deviceInfo = await this.camera.getDeviceInfo();
     this.log.debug(
-      `${this.config.name}`,
+      `[${this.config.name}]`,
       "Info accessory",
       JSON.stringify(deviceInfo)
     );
