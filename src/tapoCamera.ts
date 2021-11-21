@@ -117,35 +117,43 @@ export class TAPOCamera extends OnvifCamera {
       return this.pendingAPIRequests.get(reqJson)!;
     }
 
+    this.log.debug(
+      `[${this.config.name}]`,
+      `Making request req =`,
+      JSON.stringify(req)
+    );
+
     this.pendingAPIRequests.set(
       reqJson,
       (async () => {
-        const url = await this.getTAPOCameraAPIUrl();
+        try {
+          const url = await this.getTAPOCameraAPIUrl();
 
-        this.log.debug(
-          `[${this.config.name}]`,
-          `Making call to ${url} with req =`,
-          JSON.stringify(req)
-        );
+          this.log.debug(
+            `[${this.config.name}]`,
+            `URL for request is = ${url}`,
+            JSON.stringify(req)
+          );
 
-        const response = await this.fetch(url, {
-          method: "post",
-          body: JSON.stringify(req),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const json = (await response.json()) as TAPOCameraResponse;
+          const response = await this.fetch(url, {
+            method: "post",
+            body: JSON.stringify(req),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+          const json = (await response.json()) as TAPOCameraResponse;
 
-        this.log.debug(
-          `[${this.config.name}]`,
-          "response is",
-          JSON.stringify(json)
-        );
+          this.log.debug(
+            `[${this.config.name}]`,
+            "response is",
+            JSON.stringify(json)
+          );
 
-        this.pendingAPIRequests.delete(reqJson);
-
-        return json;
+          return json;
+        } finally {
+          this.pendingAPIRequests.delete(reqJson);
+        }
       })()
     );
 
