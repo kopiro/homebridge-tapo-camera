@@ -80,7 +80,7 @@ export class TAPOCamera extends OnvifCamera {
     return json.result.stok;
   }
 
-  async getToken() {
+  async getToken(): Promise<string> {
     if (this.token && this.token[1] + this.kTokenExpiration > Date.now()) {
       this.log.debug(
         `[${this.config.name}]`,
@@ -96,7 +96,7 @@ export class TAPOCamera extends OnvifCamera {
         `[${this.config.name}]`,
         `Token is being requested, returning that pending request`
       );
-      return this.tokenPromise;
+      return this.tokenPromise();
     }
 
     this.tokenPromise = async () => {
@@ -113,7 +113,7 @@ export class TAPOCamera extends OnvifCamera {
         this.tokenPromise = undefined;
       }
     };
-    return this.tokenPromise;
+    return this.tokenPromise();
   }
 
   private async getTAPOCameraAPIUrl() {
