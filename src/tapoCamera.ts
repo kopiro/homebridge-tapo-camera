@@ -6,8 +6,9 @@ import crypto from "crypto";
 import { OnvifCamera } from "./onvifCamera";
 
 export class TAPOCamera extends OnvifCamera {
-  private readonly kTokenExpiration = 1000 * 60 * 60;
+  private readonly kTokenExpiration = 10;
   private readonly kStreamPort = 554;
+  private readonly httpsAgent: Agent;
 
   private readonly hashedPassword: string;
   private token: Promise<[string, number]> | undefined;
@@ -15,6 +16,9 @@ export class TAPOCamera extends OnvifCamera {
   constructor(log: Logging, config: CameraConfig) {
     super(log, config);
 
+    this.httpsAgent = new https.Agent({
+      rejectUnauthorized: false,
+    });
     this.hashedPassword = crypto
       .createHash("md5")
       .update(config.password)
@@ -25,9 +29,7 @@ export class TAPOCamera extends OnvifCamera {
   fetch(url: string, data: any) {
     return fetch(url, {
       ...data,
-      agent: new https.Agent({
-        rejectUnauthorized: false,
-      }),
+      agent: this.httpsAgent,
     });
   }
 
