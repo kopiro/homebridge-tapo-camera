@@ -11,7 +11,8 @@ export class TAPOCamera extends OnvifCamera {
   private readonly httpsAgent: Agent;
 
   private readonly hashedPassword: string;
-  private token: Promise<[string, number]> | undefined;
+  private token: [string, number] | undefined;
+  private tokenPromise: (() => Promise<string>) | undefined;
 
   constructor(log: Logging, config: CameraConfig) {
     super(log, config);
@@ -45,7 +46,7 @@ export class TAPOCamera extends OnvifCamera {
     return lowQuality ? `${prefix}/stream2` : `${prefix}/stream1`;
   }
 
-  private async fetchToken(): Promise<[string, number]> {
+  private async fetchToken(): Promise<string> {
     this.log.debug(`[${this.config.name}]`, "Fetching new token");
 
     const response = await this.fetch(`https://${this.config.ipAddress}/`, {
@@ -76,32 +77,43 @@ export class TAPOCamera extends OnvifCamera {
       );
     }
 
-    return [json.result.stok, Date.now()];
+    return json.result.stok;
   }
 
   async getToken() {
-    if (this.token) {
-      const tok = await this.token;
-      if (tok[1] + this.kTokenExpiration > Date.now()) {
-        this.log.debug(
-          `[${this.config.name}]`,
-          `Token still has ${
-            (tok[1] + this.kTokenExpiration - Date.now()) / 1000
-          }s to live, using it.`
-        );
-        return tok[0];
-      }
+    if (this.token && this.token[1] + this.kTokenExpiration > Date.now()) {
+      this.log.debug(
+        `[${this.config.name}]`,
+        `Token still has ${
+          (this.token[1] + this.kTokenExpiration - Date.now()) / 1000
+        }s to live, using it.`
+      );
+      return this.token[0];
     }
 
-    this.log.debug(
-      `[${this.config.name}]`,
-      `Token is expired, requesting new one.`
-    );
+    if (this.tokenPromise) {
+      this.log.debug(
+        `[${this.config.name}]`,
+        `Token is being requested, returning that pending request`
+      );
+      return this.tokenPromise;
+    }
 
-    this.token = this.fetchToken();
-    return this.token
-      .then((token) => token[0])
-      .finally(() => (this.token = undefined));
+    this.tokenPromise = async () => {
+      try {
+        this.log.debug(
+          `[${this.config.name}]`,
+          `Token is expired , requesting new one.`
+        );
+
+        const token = await this.fetchToken();
+        this.token = [token, Date.now()];
+        return token;
+      } finally {
+        this.tokenPromise = undefined;
+      }
+    };
+    return this.tokenPromise;
   }
 
   private async getTAPOCameraAPIUrl() {
