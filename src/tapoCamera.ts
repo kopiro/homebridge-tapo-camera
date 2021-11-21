@@ -6,7 +6,7 @@ import crypto from "crypto";
 import { OnvifCamera } from "./onvifCamera";
 
 export class TAPOCamera extends OnvifCamera {
-  private readonly kTokenExpiration = 10;
+  private readonly kTokenExpiration = 1000 * 60 * 60; // 1h
   private readonly kStreamPort = 554;
   private readonly httpsAgent: Agent;
 
