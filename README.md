@@ -2,15 +2,9 @@
 
 Make your TP-Link TAPO security camera compatible with Homekit through Homebridge.
 
+![photo_2021-11-23 11 57 48](https://user-images.githubusercontent.com/839700/143013358-9f6eed44-3aad-40b0-b1e5-ddc2c5bb24e4.png)
+
 The plugin exposes the camera RSTP video feed and 2 accessories to control "Privacy Mode" and "Alarm".
-
-#### Video Feed
-
-<img width="200px" src="https://user-images.githubusercontent.com/839700/138455588-a0754e1c-2d85-4f3f-a5cf-8e2468236c1f.PNG" />
-
-#### Accessories
-
-<img width="200px" src="https://user-images.githubusercontent.com/839700/138455583-8a5f74e7-057d-457d-8efd-789d9976ddd7.PNG" />
 
 The accessory called "Eyes" controls the privacy mode; when it's on it means that the camera is able to see.
 This is to make sure we support "Hey Siri, turn on Camera" (this will disable privacy mode and enable alarm).
