@@ -40,8 +40,8 @@ Add this configuration in the `platforms` key in your Homebridge configuration.
 
 ```json5
 {
-  // bridge and accessories config
-  platforms: [
+  // ...
+  "platforms": [
     // Other platforms
     {
       "platform": "TAPO-CAMERA",
