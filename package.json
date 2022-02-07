@@ -21,7 +21,8 @@
   },
   "files": [
     "LICENSE",
-    "dist"
+    "dist",
+    "config.schema.json"
   ],
   "author": "Flavio De Stefano",
   "license": "ISC",
