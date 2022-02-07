@@ -1,20 +1,18 @@
 # homebridge-tapo-camera
 
-Make your TP-Link TAPO security camera compatible with Homekit through Homebridge.
+Make your TP-Link TAPO security camera compatible with Homekit through Homebridge / HOOBS.
 
 ![photo_2021-11-23 11 57 48](https://user-images.githubusercontent.com/839700/143013358-9f6eed44-3aad-40b0-b1e5-ddc2c5bb24e4.png)
 
-The plugin exposes the camera RSTP video feed and 2 accessories to control "Privacy Mode" and "Alarm".
+The plugin exposes the camera RSTP video feed, 2 accessories to control "Privacy Mode" and "Alarm" and a motion detection accessory.
 
-The accessory called "Eyes" controls the privacy mode; when it's on it means that the camera is able to see.
-This is to make sure we support "Hey Siri, turn on Camera" (this will disable privacy mode and enable alarm).
+The accessory called _"Eyes"_ controls the privacy mode; when it's on it means that the camera is able to see
+(this is to make sure we support the command "Hey Siri, turn _on_ Camera", as this will _disable_ privacy mode and enable alarm).
 
-The accessory called "Alarm" switch on/off the sound alarm, but not notifications.
-
-#### Motion Detection
+The accessory called _"Alarm"_ switches on/off the alarm sound, but keep in mind that notifications will still be sent to the phone.
 
 The motion detection is built on top of the ONVIF protocol and it is enabled by default; therefore you can setup
-automations and Homekit can send you notification when a motion is detected.
+automations and Homekit can send you notification when motion is detected.
 
 ## Installation
 
@@ -30,16 +28,11 @@ It is highly recommended that you use either Homebridge Config UI X or the HOOBS
 
 ### Adding the unbridged accessory to Home
 
-This plugin configures the cameras as unbridged accessories, therefore you need to manually add them in your Home app;
-use the code that HomeBridge give you.
+Once done you will have unbridged accessories, therefore you need to manually add them in your Home app.
 
 ### Manual configuration
 
-If you want to have manual control over the configuration, add this configuration in the `platforms` key in your Homebridge configuration.
-
-- `__IP_ADDRESS__` is the IP address of the camera in your local network; as long you have a bridge setup, you can also fully control the camera outisde your Home.
-- `__PASSWORD__` is the password of your TAPO Cloud account, the username/email is not needed.
-- `__STREAM_USER__` and `__STREAM_PASSWORD__` are the credentials you set in Settings > Advanced Settings > Camera Account.
+If you want to have manual control over the configuration, add the following configuration in the `platforms` key:
 
 ```json5
 {
@@ -72,3 +65,7 @@ If you want to have manual control over the configuration, add this configuratio
   ],
 }
 ```
+
+- `__IP_ADDRESS__` is the IP address of the camera in your local network; as long you have a bridge setup, you can also fully control the camera outisde your Home.
+- `__PASSWORD__` is the password of your TAPO Cloud account, the username/email is not needed.
+- `__STREAM_USER__` and `__STREAM_PASSWORD__` are the credentials you set in Settings > Advanced Settings > Camera Account.
