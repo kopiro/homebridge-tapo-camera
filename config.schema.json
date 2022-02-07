@@ -3,7 +3,7 @@
   "pluginType": "platform",
   "singular": true,
   "headerDisplay": "Homebridge plugin for TP-Link TAPO security cameras",
-  "footerDisplay": "Visit https://github.com/kopiro/homebridge-tapo-camera for more information",
+  "footerDisplay": null,
   "form": null,
   "display": null,
   "schema": {
