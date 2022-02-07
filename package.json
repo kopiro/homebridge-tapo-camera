@@ -10,7 +10,10 @@
     "postpublish": "npm run clean"
   },
   "keywords": [
-    "homebridge-plugin"
+    "homebridge-plugin",
+    "tapo",
+    "camera",
+    "tplink"
   ],
   "engines": {
     "homebridge": ">=1.0.0"
@@ -24,8 +27,16 @@
     "dist",
     "config.schema.json"
   ],
-  "author": "Flavio De Stefano",
+  "author": {
+    "name": "Flavio De Stefano",
+    "email": "destefano.flavio@gmail.com",
+    "url": "https://www.kopiro.me"
+  },
   "license": "ISC",
+  "funding": {
+    "type": "paypal",
+    "url": "https://www.paypal.me/kopiro"
+  },
   "dependencies": {
     "homebridge-camera-ffmpeg": "^3.1.3",
     "node-fetch": "^2.6.7",
