@@ -47,6 +47,7 @@ If you want to have manual control over the configuration, add this configuratio
   platforms: [
     // Other platforms
     {
+      // Note, if you've upgraded the plugin and you have no more camera in the Home app, you need to change this to "tapo-camera" lowercase (before v1.6.2 it was "TAPO-CAMERA")
       platform: "tapo-camera",
       cameras: [
         {
@@ -59,11 +60,11 @@ If you want to have manual control over the configuration, add this configuratio
 
           // Optionals, don't put them in the config if you need the default values
           pullInterval: 60000, // Numbers of milleseconds after we update accessories by polling
-          debug: false, // Enables verbose logs
-          disableStreaming: false, // Disable the video feed
-          disablePrivacyAccessory: false, // Disable the privacy accessory
-          disableAlarmAccessory: false, // Disable the alarm accessory
-          disableMotionAccessory: false, // Disable the motion detection sensor
+          debug: false, // Enables verbose logs in the video-ffmpeg plugin
+          disableStreaming: false, // Disables the video feed
+          disablePrivacyAccessory: false, // Disables the privacy accessory
+          disableAlarmAccessory: false, // Disables the alarm accessory
+          disableMotionAccessory: false, // Disables the motion detection sensor
           lowQuality: false, // Video stream will be requested in low-quality (640x480) instead of HQ (1920x1080)
         },
       ],
