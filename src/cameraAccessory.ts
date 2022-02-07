@@ -9,6 +9,7 @@ import { StreamingDelegate } from "homebridge-camera-ffmpeg/dist/streamingDelega
 import { Logger } from "homebridge-camera-ffmpeg/dist/logger";
 import { TAPOCamera } from "./tapoCamera";
 import { pkg } from "./pkg";
+import { DeviceInformation } from "onvif";
 
 export type CameraConfig = {
   name: string;
@@ -56,20 +57,10 @@ export class CameraAccessory {
       this.uuid,
       this.api.hap.Categories.CAMERA
     );
-
     this.camera = new TAPOCamera(this.log, this.config);
-
-    this.setup().catch((err) => {
-      this.log.error(
-        `[${this.config.name}]`,
-        "Error during setup",
-        (err as Error)?.message
-      );
-    });
   }
 
-  private async setupInfoAccessory() {
-    const deviceInfo = await this.camera.getDeviceInfo();
+  private setupInfoAccessory(deviceInfo: DeviceInformation) {
     this.log.debug(
       `[${this.config.name}]`,
       "Info accessory",
@@ -154,9 +145,7 @@ export class CameraAccessory {
     };
   }
 
-  private async setupCameraStreaming() {
-    const deviceInfo = await this.camera.getDeviceInfo();
-
+  private async setupCameraStreaming(deviceInfo: DeviceInformation) {
     const delegate = new StreamingDelegate(
       new Logger(this.log),
       {
@@ -215,13 +204,13 @@ export class CameraAccessory {
     }, this.config.pullInterval || this.kDefaultPullInterval);
   }
 
-  private async setup() {
-    this.log.info(`[${this.config.name}]`, `Setup camera`);
+  async setup() {
+    const deviceInfo = await this.camera.getDeviceInfo();
 
-    await this.setupInfoAccessory();
+    this.setupInfoAccessory(deviceInfo);
 
     if (!this.config.disableStreaming) {
-      await this.setupCameraStreaming();
+      this.setupCameraStreaming(deviceInfo);
     }
 
     if (!this.config.disablePrivacyAccessory) {
