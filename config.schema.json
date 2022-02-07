@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "TAPO-CAMERA",
+  "pluginAlias": "tapo-camera",
   "pluginType": "platform",
   "singular": true,
   "headerDisplay": "Homebridge plugin for TP-Link TAPO security cameras",
@@ -58,12 +58,12 @@
             "description": "Enables debugging of the underlying camera-ffmpeg plugin"
           },
           "disableStreaming": {
-            "title": "Enable Dummy Switches",
+            "title": "Disable Streaming",
             "type": "boolean",
             "description": "Disables the video feed accessory"
           },
           "disablePrivacyAccessory": {
-            "title": "Enable Dummy Switches",
+            "title": "Disable Privacy",
             "type": "boolean",
             "description": "Disables the privacy mode switch accessory"
           },
@@ -73,7 +73,7 @@
             "description": "Disables the Alarm switch accessory"
           },
           "disableMotionAccessory": {
-            "title": "Enable Dummy Switches",
+            "title": "Disable Motion",
             "type": "boolean",
             "description": "Disables the Motion Detection accessory"
           },
