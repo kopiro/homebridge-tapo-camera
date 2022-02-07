@@ -26,7 +26,16 @@ npm -g install homebridge-tapo-camera
 
 ### Configuration
 
-Add this configuration in the `platforms` key in your Homebridge configuration.
+It is highly recommended that you use either Homebridge Config UI X or the HOOBS UI to install and configure this plugin.
+
+### Adding the unbridged accessory to Home
+
+This plugin configures the cameras as unbridged accessories, therefore you need to manually add them in your Home app;
+use the code that HomeBridge give you.
+
+### Manual configuration
+
+If you want to have manual control over the configuration, add this configuration in the `platforms` key in your Homebridge configuration.
 
 - `__IP_ADDRESS__` is the IP address of the camera in your local network; as long you have a bridge setup, you can also fully control the camera outisde your Home.
 - `__PASSWORD__` is the password of your TAPO Cloud account, the username/email is not needed.
@@ -35,38 +44,31 @@ Add this configuration in the `platforms` key in your Homebridge configuration.
 ```json5
 {
   // ...
-  "platforms": [
+  platforms: [
     // Other platforms
     {
-      "platform": "TAPO-CAMERA",
-      "cameras": [
+      // Note, if you've upgraded the plugin and you have no more camera in the Home app, you need to change this to "tapo-camera" lowercase (before v1.6.2 it was "TAPO-CAMERA")
+      platform: "tapo-camera",
+      cameras: [
         {
-          "name": "Adamo",
+          name: "Adamo",
 
-          "ipAddress": "__IP_ADDRESS__",
-          "password": "__PASSWORD__",
-          "streamPassword": "__STREAM_PASSWORD__",
-          "streamUser": "__STREAM_USER__",
+          ipAddress: "__IP_ADDRESS__",
+          password: "__PASSWORD__",
+          streamPassword: "__STREAM_PASSWORD__",
+          streamUser: "__STREAM_USER__",
 
           // Optionals, don't put them in the config if you need the default values
-          "pullInterval": 60000, // Numbers of milleseconds after we update accessories by polling
-          "debug": false, // Enables verbose logs
-          "disableStreaming": false, // Disable the video feed
-          "disablePrivacyAccessory": false, // Disable the privacy accessory
-          "disableAlarmAccessory": false, // Disable the alarm accessory
-          "disableMotionAccessory": false, // Disable the motion detection sensor
-          "lowQuality": false, // Video stream will be requested in low-quality (640x480) instead of HQ (1920x1080)
+          pullInterval: 60000, // Numbers of milleseconds after we update accessories by polling
+          debug: false, // Enables verbose logs in the video-ffmpeg plugin
+          disableStreaming: false, // Disables the video feed
+          disablePrivacyAccessory: false, // Disables the privacy accessory
+          disableAlarmAccessory: false, // Disables the alarm accessory
+          disableMotionAccessory: false, // Disables the motion detection sensor
+          lowQuality: false, // Video stream will be requested in low-quality (640x480) instead of HQ (1920x1080)
         },
-
-        // Second camera (if any)
-        {},
       ],
-    }
-  ]
+    },
+  ],
 }
 ```
-
-### Adding the unbridged accessory to Home
-
-This plugin configures the cameras as unbridged accessories, therefore you need to manually add them in your Home app;
-use the code that HomeBridge give you.

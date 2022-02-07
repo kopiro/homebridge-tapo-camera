@@ -225,7 +225,7 @@ export class CameraAccessory {
       this.setupMotionDetectionAccessory();
     }
 
-    this.api.publishExternalAccessories(pkg.pluginName, [this.accessory]);
+    this.api.publishExternalAccessories(pkg.pluginId, [this.accessory]);
 
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
       this.log.info(`[${this.config.name}]`, "Identify requested");
