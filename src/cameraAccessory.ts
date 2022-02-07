@@ -59,7 +59,15 @@ export class CameraAccessory {
 
     this.camera = new TAPOCamera(this.log, this.config);
 
-    this.setup();
+    try {
+      this.setup();
+    } catch (err) {
+      this.log.error(
+        `[${this.config.name}]`,
+        "Error during setup",
+        (err as Error)?.message
+      );
+    }
   }
 
   private async setupInfoAccessory() {
@@ -177,21 +185,15 @@ export class CameraAccessory {
       "alarm"
     );
 
-    (await this.camera.getEventEmitter()).addListener(
-      "motion",
-      (motionDetected) => {
-        this.log.info(
-          `[${this.config.name}]`,
-          "Motion detected",
-          motionDetected
-        );
+    const eventEmitter = await this.camera.getEventEmitter();
+    eventEmitter.addListener("motion", (motionDetected) => {
+      this.log.info(`[${this.config.name}]`, "Motion detected", motionDetected);
 
-        this.motionService?.updateCharacteristic(
-          this.api.hap.Characteristic.MotionDetected,
-          motionDetected
-        );
-      }
-    );
+      this.motionService?.updateCharacteristic(
+        this.api.hap.Characteristic.MotionDetected,
+        motionDetected
+      );
+    });
   }
 
   private async resetPollingTimer() {
