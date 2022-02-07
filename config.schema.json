@@ -68,7 +68,7 @@
             "description": "Disables the privacy mode switch accessory"
           },
           "disableAlarmAccessory": {
-            "title": "Enable Dummy Switches",
+            "title": "Disable Alarm",
             "type": "boolean",
             "description": "Disables the Alarm switch accessory"
           },
