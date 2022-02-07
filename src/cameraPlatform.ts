@@ -30,8 +30,16 @@ export class CameraPlatform implements DynamicPlatformPlugin {
   }
 
   didFinishLaunching() {
-    this.config.cameras.forEach((cameraConfig) => {
-      new CameraAccessory(this.log, cameraConfig, this.api);
+    this.config.cameras.forEach(async (cameraConfig) => {
+      try {
+        const accessory = new CameraAccessory(this.log, cameraConfig, this.api);
+        await accessory.setup();
+      } catch (err) {
+        this.log.error(
+          `Error during setup of camera ${cameraConfig.name}`,
+          (err as Error)?.message
+        );
+      }
     });
   }
 

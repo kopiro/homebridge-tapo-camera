@@ -62,15 +62,13 @@ export class OnvifCamera extends Camera {
   }
 
   async getVideoSource(): Promise<VideoSource> {
-    return new Promise(async (resolve, reject) => {
-      const onvifDevice = await this.getDevice();
-      return resolve(onvifDevice.videoSources[0]);
-    });
+    const onvifDevice = await this.getDevice();
+    return onvifDevice.videoSources[0];
   }
 
   async getDeviceInfo(): Promise<DeviceInformation> {
+    const onvifDevice = await this.getDevice();
     return new Promise(async (resolve, reject) => {
-      const onvifDevice = await this.getDevice();
       onvifDevice.getDeviceInformation((err, deviceInformation) => {
         if (err) return reject(err);
         resolve(deviceInformation);
