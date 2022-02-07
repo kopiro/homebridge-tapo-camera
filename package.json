@@ -1,6 +1,6 @@
 {
   "name": "homebridge-tapo-camera",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Homebridge plugin for TP-Link TAPO security cameras",
   "main": "dist/index.js",
   "scripts": {
