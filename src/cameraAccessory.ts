@@ -59,15 +59,13 @@ export class CameraAccessory {
 
     this.camera = new TAPOCamera(this.log, this.config);
 
-    try {
-      this.setup();
-    } catch (err) {
+    this.setup().catch((err) => {
       this.log.error(
         `[${this.config.name}]`,
         "Error during setup",
         (err as Error)?.message
       );
-    }
+    });
   }
 
   private async setupInfoAccessory() {
@@ -220,10 +218,10 @@ export class CameraAccessory {
   private async setup() {
     this.log.info(`[${this.config.name}]`, `Setup camera`);
 
-    this.setupInfoAccessory();
+    await this.setupInfoAccessory();
 
     if (!this.config.disableStreaming) {
-      this.setupCameraStreaming();
+      await this.setupCameraStreaming();
     }
 
     if (!this.config.disablePrivacyAccessory) {
