@@ -47,7 +47,7 @@ If you want to have manual control over the configuration, add this configuratio
   platforms: [
     // Other platforms
     {
-      platform: "TAPO-CAMERA",
+      platform: "tapo-camera",
       cameras: [
         {
           name: "Adamo",

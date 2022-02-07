@@ -53,7 +53,7 @@ export class CameraPlatform implements DynamicPlatformPlugin {
   }
 
   removeAccessory(platformAccessory: PlatformAccessory) {
-    this.api.unregisterPlatformAccessories(pkg.pluginName, pkg.name, [
+    this.api.unregisterPlatformAccessories(pkg.pluginId, pkg.platformName, [
       platformAccessory,
     ]);
   }
