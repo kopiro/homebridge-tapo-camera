@@ -69,7 +69,8 @@ export class CameraAccessory {
 
     this.infoAccessory = this.accessory.getService(
       this.api.hap.Service.AccessoryInformation
-    )!;
+    );
+    if (!this.infoAccessory) return;
 
     this.infoAccessory
       .setCharacteristic(
@@ -123,7 +124,7 @@ export class CameraAccessory {
       })
       .onSet((status) => {
         this.log.debug(`Setting privacy to ${status ? "on" : "off"}`);
-        this.camera.setLensMaskConfig(!Boolean(status));
+        this.camera.setLensMaskConfig(!status);
       });
   }
 
