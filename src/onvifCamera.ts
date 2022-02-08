@@ -20,7 +20,9 @@ export class OnvifCamera extends Camera {
 
   private async getDevice(): Promise<Cam> {
     return new Promise((resolve, reject) => {
-      if (this.device) return resolve(this.device);
+      if (this.device) {
+        return resolve(this.device);
+      }
 
       const device: Cam = new Cam(
         {
@@ -30,7 +32,9 @@ export class OnvifCamera extends Camera {
           port: this.kOnvifPort,
         },
         (err) => {
-          if (err) return reject(err);
+          if (err) {
+            return reject(err);
+          }
           this.device = device;
           return resolve(this.device);
         }
@@ -39,7 +43,9 @@ export class OnvifCamera extends Camera {
   }
 
   async getEventEmitter() {
-    if (this.events) return this.events;
+    if (this.events) {
+      return this.events;
+    }
 
     const onvifDevice = await this.getDevice();
 
@@ -53,7 +59,8 @@ export class OnvifCamera extends Camera {
         const motion = event.message.message.data.simpleItem.$.Value;
         if (motion !== lastMotionValue) {
           lastMotionValue = motion;
-          this.events!.emit("motion", motion);
+          this.events = this.events || new EventEmitter();
+          this.events.emit("motion", motion);
         }
       }
     });
@@ -68,7 +75,7 @@ export class OnvifCamera extends Camera {
 
   async getDeviceInfo(): Promise<DeviceInformation> {
     const onvifDevice = await this.getDevice();
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       onvifDevice.getDeviceInformation((err, deviceInformation) => {
         if (err) return reject(err);
         resolve(deviceInformation);

@@ -52,6 +52,7 @@ declare module "onvif" {
     getDeviceInformation(
       callback: (error: Error, deviceInformation: DeviceInformation) => void
     ): void;
+
     videoSources: VideoSource[];
   }
 }
@@ -160,7 +161,7 @@ declare type TAPOCameraResponseGetLensMask = {
 
 declare type TAPOCameraResponseSet = {
   method: "setLensMaskConfig" | "setAlertConfig";
-  result: {};
+  result: object;
   error_code: number;
 };
 

@@ -27,7 +27,7 @@ export class TAPOCamera extends OnvifCamera {
       .toUpperCase();
   }
 
-  fetch(url: string, data: any) {
+  fetch(url: string, data: object) {
     return fetch(url, {
       ...data,
       agent: this.httpsAgent,
@@ -94,7 +94,7 @@ export class TAPOCamera extends OnvifCamera {
     if (this.tokenPromise) {
       this.log.debug(
         `[${this.config.name}]`,
-        `Token is being requested, returning that pending request`
+        "Token is being requested, returning that pending request"
       );
       return this.tokenPromise();
     }
@@ -103,7 +103,7 @@ export class TAPOCamera extends OnvifCamera {
       try {
         this.log.debug(
           `[${this.config.name}]`,
-          `Token is expired , requesting new one.`
+          "Token is expired , requesting new one."
         );
 
         const token = await this.fetchToken();
@@ -130,15 +130,17 @@ export class TAPOCamera extends OnvifCamera {
     if (this.pendingAPIRequests.has(reqJson)) {
       this.log.debug(
         `[${this.config.name}]`,
-        `Getting previous request as it is still going on for req =`,
+        "Getting previous request as it is still going on for req =",
         JSON.stringify(req)
       );
-      return this.pendingAPIRequests.get(reqJson)!;
+      return this.pendingAPIRequests.get(
+        reqJson
+      ) as Promise<TAPOCameraResponse>;
     }
 
     this.log.debug(
       `[${this.config.name}]`,
-      `Making new request req =`,
+      "Making new request req =",
       JSON.stringify(req)
     );
 
@@ -176,7 +178,7 @@ export class TAPOCamera extends OnvifCamera {
       })()
     );
 
-    return this.pendingAPIRequests.get(reqJson)!;
+    return this.pendingAPIRequests.get(reqJson) as Promise<TAPOCameraResponse>;
   }
 
   async setLensMaskConfig(value: boolean) {
