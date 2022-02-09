@@ -4,14 +4,14 @@ Make your TP-Link TAPO security camera compatible with Homekit through Homebridg
 
 ![photo_2021-11-23 11 57 48](https://user-images.githubusercontent.com/839700/143013358-9f6eed44-3aad-40b0-b1e5-ddc2c5bb24e4.png)
 
-The plugin exposes the camera RSTP video feed, 2 accessories to control "Privacy Mode" and "Alarm" and a motion detection accessory.
+The plugin exposes the camera RTSP video feed, 2 accessories to control "Privacy Mode" and "Alarm" and a motion detection accessory.
 
 The accessory called _"Eyes"_ controls the privacy mode; when it's on it means that the camera is able to see
 (this is to make sure we support the command "Hey Siri, turn _on_ Camera", as this will _disable_ privacy mode and enable alarm).
 
 The accessory called _"Alarm"_ switches on/off the alarm sound, but keep in mind that notifications will still be sent to the phone.
 
-The motion detection is built on top of the ONVIF protocol and it is enabled by default; therefore you can setup
+The motion detection is built on top of the ONVIF protocol and it is enabled by default; therefore you can set up
 automations and Homekit can send you notification when motion is detected.
 
 ## Installation
@@ -52,7 +52,7 @@ If you want to have manual control over the configuration, add the following con
           streamUser: "__STREAM_USER__",
 
           // Optionals, don't put them in the config if you need the default values
-          pullInterval: 60000, // Numbers of milleseconds after we update accessories by polling
+          pullInterval: 60000, // Numbers of milliseconds after we update accessories by polling
           debug: false, // Enables verbose logs in the video-ffmpeg plugin
           disableStreaming: false, // Disables the video feed
           disablePrivacyAccessory: false, // Disables the privacy accessory
@@ -66,6 +66,6 @@ If you want to have manual control over the configuration, add the following con
 }
 ```
 
-- `__IP_ADDRESS__` is the IP address of the camera in your local network; as long you have a bridge setup, you can also fully control the camera outisde your Home.
+- `__IP_ADDRESS__` is the IP address of the camera in your local network; as long you have a bridge setup, you can also fully control the camera outside your Home.
 - `__PASSWORD__` is the password of your TAPO Cloud account, the username/email is not needed.
 - `__STREAM_USER__` and `__STREAM_PASSWORD__` are the credentials you set in Settings > Advanced Settings > Camera Account.

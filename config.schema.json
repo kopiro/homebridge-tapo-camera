@@ -37,19 +37,19 @@
             "title": "Stream User",
             "type": "string",
             "required": true,
-            "description": "Username to access the RSTP video feed (You can find them in TAPO app > Settings > Advanced Settings > Camera Account)",
+            "description": "Username to access the RTSP video feed (You can find them in TAPO app > Settings > Advanced Settings > Camera Account)",
             "placeholder": "user"
           },
           "streamPassword": {
             "title": "Stream Password",
             "type": "string",
             "required": true,
-            "description": "Password to access the RSTP video feed (You can find them in TAPO app > Settings > Advanced Settings > Camera Account)"
+            "description": "Password to access the RTSP video feed (You can find them in TAPO app > Settings > Advanced Settings > Camera Account)"
           },
           "pullInterval": {
             "title": "Pull Interval",
             "type": "integer",
-            "description": "Numbers of milleseconds after we update accessories by polling the status of the camera",
+            "description": "Numbers of milliseconds after we update accessories by polling the status of the camera",
             "placeholder": 60000
           },
           "debug": {
