@@ -4,7 +4,6 @@ import https, { Agent } from "https";
 import { CameraConfig } from "./cameraAccessory";
 import crypto from "crypto";
 import { OnvifCamera } from "./onvifCamera";
-import { join } from "path/posix";
 
 export class TAPOCamera extends OnvifCamera {
   private readonly kTokenExpiration = 1000 * 60 * 60; // 1h
