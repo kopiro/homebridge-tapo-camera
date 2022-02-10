@@ -61,12 +61,6 @@ export class CameraAccessory {
   }
 
   private setupInfoAccessory(deviceInfo: DeviceInformation) {
-    this.log.debug(
-      `[${this.config.name}]`,
-      "Info accessory",
-      JSON.stringify(deviceInfo)
-    );
-
     this.infoAccessory = this.accessory.getService(
       this.api.hap.Service.AccessoryInformation
     );
@@ -190,11 +184,6 @@ export class CameraAccessory {
     }
 
     this.pullIntervalTick = setInterval(async () => {
-      this.log.debug(
-        `[${this.config.name}]`,
-        "Time to refresh characteristics"
-      );
-
       const status = await this.camera.getStatus();
       this.alertService
         ?.getCharacteristic(this.api.hap.Characteristic.On)

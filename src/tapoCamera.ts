@@ -4,6 +4,7 @@ import https, { Agent } from "https";
 import { CameraConfig } from "./cameraAccessory";
 import crypto from "crypto";
 import { OnvifCamera } from "./onvifCamera";
+import { join } from "path/posix";
 
 export class TAPOCamera extends OnvifCamera {
   private readonly kTokenExpiration = 1000 * 60 * 60; // 1h
@@ -65,12 +66,6 @@ export class TAPOCamera extends OnvifCamera {
       error_code: number;
     };
 
-    this.log.debug(
-      `[${this.config.name}]`,
-      "Token response",
-      JSON.stringify(json)
-    );
-
     if (!json.result.stok) {
       throw new Error(
         "Unable to find token in response, probably your credentials are not valid. Please make sure you set your TAPO Cloud password"
@@ -82,20 +77,10 @@ export class TAPOCamera extends OnvifCamera {
 
   async getToken(): Promise<string> {
     if (this.token && this.token[1] + this.kTokenExpiration > Date.now()) {
-      this.log.debug(
-        `[${this.config.name}]`,
-        `Token still has ${
-          (this.token[1] + this.kTokenExpiration - Date.now()) / 1000
-        }s to live, using it.`
-      );
       return this.token[0];
     }
 
     if (this.tokenPromise) {
-      this.log.debug(
-        `[${this.config.name}]`,
-        "Token is being requested, returning that pending request"
-      );
       return this.tokenPromise();
     }
 
@@ -128,11 +113,6 @@ export class TAPOCamera extends OnvifCamera {
     const reqJson = JSON.stringify(req);
 
     if (this.pendingAPIRequests.has(reqJson)) {
-      this.log.debug(
-        `[${this.config.name}]`,
-        "Getting previous request as it is still going on for req =",
-        JSON.stringify(req)
-      );
       return this.pendingAPIRequests.get(
         reqJson
       ) as Promise<TAPOCameraResponse>;
@@ -141,7 +121,7 @@ export class TAPOCamera extends OnvifCamera {
     this.log.debug(
       `[${this.config.name}]`,
       "Making new request req =",
-      JSON.stringify(req)
+      req.params.requests.map((e) => e.method)
     );
 
     this.pendingAPIRequests.set(
@@ -149,12 +129,6 @@ export class TAPOCamera extends OnvifCamera {
       (async () => {
         try {
           const url = await this.getTAPOCameraAPIUrl();
-
-          this.log.debug(
-            `[${this.config.name}]`,
-            `URL for request is = ${url}`,
-            JSON.stringify(req)
-          );
 
           const response = await this.fetch(url, {
             method: "post",
@@ -164,12 +138,6 @@ export class TAPOCamera extends OnvifCamera {
             },
           });
           const json = (await response.json()) as TAPOCameraResponse;
-
-          this.log.debug(
-            `[${this.config.name}]`,
-            "response is",
-            JSON.stringify(json)
-          );
 
           return json;
         } finally {
