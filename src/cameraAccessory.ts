@@ -48,7 +48,7 @@ export class CameraAccessory {
     );
 
   private infoAccessory: Service | undefined;
-  private alertService: Service | undefined;
+  private alarmService: Service | undefined;
   private privacyService: Service | undefined;
   private motionService: Service | undefined;
 
@@ -80,12 +80,12 @@ export class CameraAccessory {
 
   private setupAlarmAccessory() {
     const name = `${this.config.name} - Alarm`;
-    this.alertService = this.accessory.addService(
+    this.alarmService = this.accessory.addService(
       this.api.hap.Service.Switch,
       name,
       "alarm"
     );
-    this.alertService
+    this.alarmService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(() => {
         if (!this.cameraStatus) {
@@ -199,7 +199,7 @@ export class CameraAccessory {
     alert: boolean;
     lensMask: boolean;
   }) {
-    this.alertService
+    this.alarmService
       ?.getCharacteristic(this.api.hap.Characteristic.On)
       .updateValue(alert);
     this.privacyService
@@ -227,17 +227,20 @@ export class CameraAccessory {
       this.setupMotionDetectionAccessory();
     }
 
-    this.cameraStatus = await this.camera.getStatus();
-    this.updateCharacteristics(this.cameraStatus);
+    // Only setup the polling if needed
+    if (this.privacyService || this.alarmService) {
+      this.cameraStatus = await this.camera.getStatus();
+      this.updateCharacteristics(this.cameraStatus);
+
+      // Setup the polling by giving a 3s random delay
+      // to avoid all the cameras starting at the same time
+      setTimeout(() => {
+        this.platform.log.debug(`[${this.config.name}]`, "Setup polling");
+        this.setupPolling();
+      }, this.randomSeed * 3000);
+    }
 
     this.api.publishExternalAccessories(pkg.pluginId, [this.accessory]);
-
-    // Setup the polling by giving a 3s random delay
-    // to avoid all the cameras starting at the same time
-    setTimeout(() => {
-      this.platform.log.debug(`[${this.config.name}]`, "Setup polling");
-      this.setupPolling();
-    }, this.randomSeed * 3000);
 
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
       this.log.info(
