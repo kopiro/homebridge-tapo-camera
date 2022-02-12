@@ -53,13 +53,16 @@ If you want to have manual control over the configuration, add the following con
 
           // Optionals, don't put them in the config if you need the default values
           pullInterval: 60000, // Numbers of milliseconds after we update accessories by polling
-          debug: false, // Enables verbose logs in the video-ffmpeg plugin
           disableStreaming: false, // Disables the video feed
           disablePrivacyAccessory: false, // Disables the privacy accessory
           disableAlarmAccessory: false, // Disables the alarm accessory
           disableMotionAccessory: false, // Disables the motion detection sensor
           lowQuality: false, // Video stream will be requested in low-quality (640x480) instead of HQ (1920x1080)
-        },
+
+          // An object containing a video-config passed to camera-ffmpeg
+          // Please check https://www.npmjs.com/package/homebridge-camera-ffmpeg for all the possible values\
+          // Make sure you don't override default values provided by this plugin unless you know what you're doing!
+          videoConfig: {}
       ],
     },
   ],
