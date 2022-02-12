@@ -232,9 +232,12 @@ export class CameraAccessory {
 
     this.api.publishExternalAccessories(pkg.pluginId, [this.accessory]);
 
-    // Setup the polling by giving a 1s random delay
+    // Setup the polling by giving a 3s random delay
     // to avoid all the cameras starting at the same time
-    setTimeout(this.setupPolling.bind(this), this.randomSeed * 1000);
+    setTimeout(() => {
+      this.platform.log.debug(`[${this.config.name}]`, "Setup polling");
+      this.setupPolling();
+    }, this.randomSeed * 3000);
 
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
       this.log.info(
