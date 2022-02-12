@@ -199,6 +199,7 @@ export class CameraAccessory {
     alert: boolean;
     lensMask: boolean;
   }) {
+    this.platform.log.debug("Updating characteristics", { alert, lensMask });
     this.alarmService
       ?.getCharacteristic(this.api.hap.Characteristic.On)
       .updateValue(alert);
