@@ -1,7 +1,6 @@
 import {
   API,
-  APIEvent,
-  DynamicPlatformPlugin,
+  IndependentPlatformPlugin,
   Logging,
   PlatformAccessory,
   PlatformConfig,
@@ -9,30 +8,25 @@ import {
 import { CameraAccessory, CameraConfig } from "./cameraAccessory";
 import { pkg } from "./pkg";
 
-type CameraPlatformConfig = {
-  cameras: CameraConfig[];
-};
+export interface CameraPlatformConfig extends PlatformConfig {
+  cameras?: CameraConfig[];
+}
 
-export class CameraPlatform implements DynamicPlatformPlugin {
-  private readonly log: Logging;
-  private readonly config: CameraPlatformConfig;
-  private readonly api: API;
+export class CameraPlatform implements IndependentPlatformPlugin {
+  public readonly kDefaultPullInterval = 60000;
 
-  constructor(log: Logging, config: PlatformConfig, api: API) {
-    this.log = log;
-    this.config = config as unknown as CameraPlatformConfig;
-    this.api = api;
-
-    this.api.on(
-      APIEvent.DID_FINISH_LAUNCHING,
-      this.didFinishLaunching.bind(this)
-    );
+  constructor(
+    public readonly log: Logging,
+    public readonly config: CameraPlatformConfig,
+    public readonly api: API
+  ) {
+    this.discoverDevices();
   }
 
-  didFinishLaunching() {
+  private discoverDevices() {
     this.config.cameras?.forEach(async (cameraConfig) => {
       try {
-        const accessory = new CameraAccessory(this.log, cameraConfig, this.api);
+        const accessory = new CameraAccessory(this, cameraConfig);
         await accessory.setup();
       } catch (err) {
         this.log.error(
@@ -43,16 +37,7 @@ export class CameraPlatform implements DynamicPlatformPlugin {
     });
   }
 
-  /*
-   * This function is invoked when homebridge restores cached accessories from disk at startup.
-   * It should be used to set up event handlers for characteristics and update respective values.
-   */
-  configureAccessory(accessory: PlatformAccessory): void {
-    this.log("Configuring accessory %s", accessory.displayName);
-    // Won't be called for unbridged accessories
-  }
-
-  removeAccessory(platformAccessory: PlatformAccessory) {
+  private removeAccessory(platformAccessory: PlatformAccessory) {
     this.api.unregisterPlatformAccessories(pkg.pluginId, pkg.platformName, [
       platformAccessory,
     ]);
