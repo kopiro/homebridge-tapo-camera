@@ -3,13 +3,14 @@ import {
   IndependentPlatformPlugin,
   Logging,
   PlatformAccessory,
+  PlatformConfig,
 } from "homebridge";
 import { CameraAccessory, CameraConfig } from "./cameraAccessory";
 import { pkg } from "./pkg";
 
-type CameraPlatformConfig = {
-  cameras: CameraConfig[];
-};
+export interface CameraPlatformConfig extends PlatformConfig {
+  cameras?: CameraConfig[];
+}
 
 export class CameraPlatform implements IndependentPlatformPlugin {
   public readonly kDefaultPullInterval = 60000;
