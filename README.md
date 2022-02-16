@@ -2,6 +2,8 @@
 
 Make your TP-Link TAPO security camera compatible with Homekit through Homebridge / HOOBS.
 
+[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
+
 ![photo_2021-11-23 11 57 48](https://user-images.githubusercontent.com/839700/143013358-9f6eed44-3aad-40b0-b1e5-ddc2c5bb24e4.png)
 
 The plugin exposes the camera RTSP video feed, 2 accessories to control "Privacy Mode" and "Alarm" and a motion detection accessory.
