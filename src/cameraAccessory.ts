@@ -9,7 +9,7 @@ import { StreamingDelegate } from "homebridge-camera-ffmpeg/dist/streamingDelega
 import { Logger } from "homebridge-camera-ffmpeg/dist/logger";
 import { TAPOCamera } from "./tapoCamera";
 import { PLUGIN_ID } from "./pkg";
-import { DeviceInformation } from "onvif";
+import { DeviceInformation, Profile } from "onvif";
 import { CameraPlatform } from "./cameraPlatform";
 import { VideoConfig } from "homebridge-camera-ffmpeg/dist/configTypes";
 
@@ -27,7 +27,9 @@ export type CameraConfig = {
   disableMotionAccessory?: boolean;
   lowQuality?: boolean;
 
-  videoConfig?: VideoConfig;
+  vcodec?: string;
+  videoFilter?: string;
+  encoderOptions?: string;
 };
 
 export class CameraAccessory {
@@ -36,7 +38,6 @@ export class CameraAccessory {
 
   private readonly camera: TAPOCamera = new TAPOCamera(this.log, this.config);
   private cameraStatus: { lensMask: boolean; alert: boolean } | undefined;
-  private cameraInfo: DeviceInformation | undefined;
 
   private pullIntervalTick: NodeJS.Timeout | undefined;
 
@@ -124,26 +125,44 @@ export class CameraAccessory {
       });
   }
 
-  private getVideoConfig(): VideoConfig {
+  private getVideoConfig(profiles: Profile[]): VideoConfig {
+    // Choose the matching profile based on the config
+    const profileName = this.config.lowQuality ? "minorStream" : "mainStream";
+    let profile = profiles.find((p) => p.name === profileName);
+    if (!profile) {
+      profile = profiles[0];
+      console.error(
+        "Unable to find a profile named ${profileName} in the ONVIF configuration, using first one"
+      );
+    }
+
     const streamUrl = this.camera.getAuthenticatedStreamUrl(
       Boolean(this.config.lowQuality)
     );
 
-    const config: VideoConfig = {
+    const encoder = profile.videoEncoderConfiguration;
+    return {
       source: `-i ${streamUrl}`,
       audio: true,
-      videoFilter: "none",
-      vcodec: "copy",
-      maxWidth: this.config.lowQuality ? 640 : 1920,
-      maxHeight: this.config.lowQuality ? 480 : 1080,
-      maxFPS: 15,
-      forceMax: true,
-      ...(this.config.videoConfig || {}),
+
+      maxWidth: encoder.resolution.width,
+      maxHeight: encoder.resolution.height,
+      maxFPS: encoder.rateControl.frameRateLimit,
+      maxBitrate: encoder.rateControl.bitrateLimit,
+
+      vcodec: this.config.vcodec ?? "copy",
+      videoFilter: this.config.videoFilter,
+      encoderOptions: this.config.encoderOptions,
+
+      debug: process.env.NODE_ENV === "development",
+      debugReturn: process.env.NODE_ENV === "development",
     };
-    return config;
   }
 
-  private async setupCameraStreaming(deviceInfo: DeviceInformation) {
+  private async setupCameraStreaming(
+    profiles: Profile[],
+    deviceInfo: DeviceInformation
+  ) {
     const delegate = new StreamingDelegate(
       new Logger(this.log),
       {
@@ -153,7 +172,7 @@ export class CameraAccessory {
         serialNumber: deviceInfo.serialNumber,
         firmwareRevision: deviceInfo.firmwareVersion,
         unbridge: true,
-        videoConfig: this.getVideoConfig(),
+        videoConfig: this.getVideoConfig(profiles),
       },
       this.api,
       this.api.hap
@@ -219,11 +238,15 @@ export class CameraAccessory {
   }
 
   async setup() {
-    this.cameraInfo = await this.camera.getDeviceInfo();
-    this.setupInfoAccessory(this.cameraInfo);
+    const [deviceInfo, profiles] = await Promise.all([
+      this.camera.getDeviceInformation(),
+      this.camera.getProfiles(),
+    ]);
+
+    this.setupInfoAccessory(deviceInfo);
 
     if (!this.config.disableStreaming) {
-      this.setupCameraStreaming(this.cameraInfo);
+      this.setupCameraStreaming(profiles, deviceInfo);
     }
 
     if (!this.config.disablePrivacyAccessory) {
@@ -235,7 +258,14 @@ export class CameraAccessory {
     }
 
     if (!this.config.disableMotionAccessory) {
-      this.setupMotionDetectionAccessory();
+      try {
+        this.setupMotionDetectionAccessory();
+      } catch (err) {
+        this.log.error(
+          "Error at 'setupMotionDetectionAccessory'. Motion detection will be disabled.",
+          err
+        );
+      }
     }
 
     // Only setup the polling if needed
@@ -253,11 +283,7 @@ export class CameraAccessory {
     this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
 
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log.info(
-        `[${this.config.name}]`,
-        "Identify requested",
-        this.cameraInfo
-      );
+      this.log.info(`[${this.config.name}]`, "Identify requested", deviceInfo);
     });
   }
 }

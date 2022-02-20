@@ -81,6 +81,32 @@
             "title": "Low Quality",
             "type": "boolean",
             "description": "Video stream will be requested in low-quality (640x480) instead of HQ (1920x1080)"
+          },
+          "vcodec": {
+            "title": "Video Codec",
+            "type": "string",
+            "placeholder": "copy",
+            "typeahead": {
+              "source": [
+                "libx264",
+                "h264_omx",
+                "h264_videotoolbox",
+                "h264_v4l2m2m",
+                "copy"
+              ]
+            },
+            "description": "Set the codec used for encoding video sent to HomeKit, must be H.264-based. You can change to a hardware accelerated video codec with this option, if one is available."
+          },
+          "videoFilter": {
+            "title": "Additional Video Filters",
+            "type": "string",
+            "description": "Comma-delimited list of additional video filters for FFmpeg to run on the video. If 'none' is included, the default video filters are disabled."
+          },
+          "encoderOptions": {
+            "title": "Encoder Options",
+            "type": "string",
+            "placeholder": "-preset ultrafast -tune zerolatency",
+            "description": "Options to be passed to the video encoder."
           }
         }
       }

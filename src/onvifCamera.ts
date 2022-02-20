@@ -1,16 +1,12 @@
 import { Logging } from "homebridge";
 import { CameraConfig } from "./cameraAccessory";
-import {
-  Cam,
-  DeviceInformation,
-  VideoSource,
-  NotificationMessage,
-} from "onvif";
+import { Cam, DeviceInformation, NotificationMessage, Profile } from "onvif";
 import { EventEmitter } from "stream";
+import { promisify } from "util";
 
 export class OnvifCamera {
   private events: EventEmitter | undefined;
-  private device: Cam | undefined;
+  private _device: Cam | undefined;
 
   private readonly kOnvifPort = 2020;
 
@@ -20,11 +16,9 @@ export class OnvifCamera {
   ) {}
 
   private async getDevice(): Promise<Cam> {
-    return new Promise((resolve, reject) => {
-      if (this.device) {
-        return resolve(this.device);
-      }
+    if (this._device) return this._device;
 
+    return new Promise((resolve, reject) => {
       const device: Cam = new Cam(
         {
           hostname: this.config.ipAddress,
@@ -33,54 +27,44 @@ export class OnvifCamera {
           port: this.kOnvifPort,
         },
         (err) => {
-          if (err) {
-            return reject(err);
-          }
-          this.device = device;
-          return resolve(this.device);
+          if (err) return reject(err);
+          this._device = device;
+          return resolve(this._device);
         }
       );
     });
   }
 
-  async getEventEmitter() {
-    if (this.events) {
-      return this.events;
-    }
+  public async getProfiles(): Promise<Profile[]> {
+    const device = await this.getDevice();
+    return promisify(device.getProfiles).bind(device)();
+  }
 
-    const onvifDevice = await this.getDevice();
+  public async getDeviceInformation(): Promise<DeviceInformation> {
+    const device = await this.getDevice();
+    return promisify(device.getDeviceInformation).bind(device)();
+  }
+
+  async getEventEmitter() {
+    if (this.events) return this.events;
+
+    const device = await this.getDevice();
 
     let lastMotionValue = false;
 
     this.events = new EventEmitter();
     this.log.debug(`[${this.config.name}]`, "Starting ONVIF listener");
 
-    onvifDevice.on("event", (event: NotificationMessage) => {
+    device.on("event", (event: NotificationMessage) => {
       if (event?.topic?._?.match(/RuleEngine\/CellMotionDetector\/Motion$/)) {
-        const motion = event.message.message.data.simpleItem.$.Value;
+        const motion = Boolean(event.message.message.data.simpleItem.$.Value);
         if (motion !== lastMotionValue) {
           lastMotionValue = motion;
-          this.events = this.events || new EventEmitter();
-          this.events.emit("motion", motion);
+          this.events?.emit("motion", motion);
         }
       }
     });
 
     return this.events;
-  }
-
-  async getVideoSource(): Promise<VideoSource> {
-    const onvifDevice = await this.getDevice();
-    return onvifDevice.videoSources[0];
-  }
-
-  async getDeviceInfo(): Promise<DeviceInformation> {
-    const onvifDevice = await this.getDevice();
-    return new Promise((resolve, reject) => {
-      onvifDevice.getDeviceInformation((err, deviceInformation) => {
-        if (err) return reject(err);
-        resolve(deviceInformation);
-      });
-    });
   }
 }

@@ -141,11 +141,16 @@ export class TAPOCamera extends OnvifCamera {
           });
           const json = (await response.json()) as TAPOCameraResponse;
           this.log.debug(
+            `[${this.config.name}]`,
             `makeTAPOAPIRequest url: ${url}, json: ${JSON.stringify(json)}`
           );
           if (json.error_code !== 0) {
             // Because of the token error when the camera comes back from no response.
-            this.log.info("Reset token. error_code: ", json.error_code);
+            this.log.info(
+              `[${this.config.name}]`,
+              "Reset token. error_code: ",
+              json.error_code
+            );
             this.token = undefined;
           }
 
