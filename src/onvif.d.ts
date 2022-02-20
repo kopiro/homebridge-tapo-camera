@@ -155,6 +155,7 @@ declare module "onvif" {
       Name: string;
       Type: string;
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     parameters: any;
   }
 
