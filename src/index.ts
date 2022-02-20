@@ -1,7 +1,7 @@
 import { API } from "homebridge";
 import { CameraPlatform } from "./cameraPlatform";
-import { pkg } from "./pkg";
+import { PLATFORM_NAME } from "./pkg";
 
 export = (api: API) => {
-  api.registerPlatform(pkg.platformName, CameraPlatform);
+  api.registerPlatform(PLATFORM_NAME, CameraPlatform);
 };

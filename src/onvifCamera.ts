@@ -6,17 +6,18 @@ import {
   VideoSource,
   NotificationMessage,
 } from "onvif";
-import { Camera } from "./camera";
 import { EventEmitter } from "stream";
 
-export class OnvifCamera extends Camera {
+export class OnvifCamera {
   private events: EventEmitter | undefined;
   private device: Cam | undefined;
+
   private readonly kOnvifPort = 2020;
 
-  constructor(log: Logging, config: CameraConfig) {
-    super(log, config);
-  }
+  constructor(
+    protected readonly log: Logging,
+    protected readonly config: CameraConfig
+  ) {}
 
   private async getDevice(): Promise<Cam> {
     return new Promise((resolve, reject) => {

@@ -1,4 +1,2 @@
-export const pkg = {
-  pluginId: "homebridge-tapo-camera",
-  platformName: "tapo-camera",
-};
+export const PLUGIN_ID = "homebridge-tapo-camera";
+export const PLATFORM_NAME = "tapo-camera";

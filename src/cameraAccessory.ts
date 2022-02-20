@@ -8,7 +8,7 @@ import {
 import { StreamingDelegate } from "homebridge-camera-ffmpeg/dist/streamingDelegate";
 import { Logger } from "homebridge-camera-ffmpeg/dist/logger";
 import { TAPOCamera } from "./tapoCamera";
-import { pkg } from "./pkg";
+import { PLUGIN_ID } from "./pkg";
 import { DeviceInformation } from "onvif";
 import { CameraPlatform } from "./cameraPlatform";
 import { VideoConfig } from "homebridge-camera-ffmpeg/dist/configTypes";
@@ -250,7 +250,7 @@ export class CameraAccessory {
       }, this.randomSeed * 3000);
     }
 
-    this.api.publishExternalAccessories(pkg.pluginId, [this.accessory]);
+    this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
 
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
       this.log.info(

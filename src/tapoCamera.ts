@@ -14,7 +14,10 @@ export class TAPOCamera extends OnvifCamera {
   private token: [string, number] | undefined;
   private tokenPromise: (() => Promise<string>) | undefined;
 
-  constructor(log: Logging, config: CameraConfig) {
+  constructor(
+    protected readonly log: Logging,
+    protected readonly config: CameraConfig
+  ) {
     super(log, config);
 
     this.httpsAgent = new https.Agent({
@@ -137,7 +140,9 @@ export class TAPOCamera extends OnvifCamera {
             },
           });
           const json = (await response.json()) as TAPOCameraResponse;
-          this.log.debug(`makeTAPOAPIRequest url: ${url}, json: ${JSON.stringify(json)}`);
+          this.log.debug(
+            `makeTAPOAPIRequest url: ${url}, json: ${JSON.stringify(json)}`
+          );
           if (json.error_code !== 0) {
             // Because of the token error when the camera comes back from no response.
             this.log.info("Reset token. error_code: ", json.error_code);

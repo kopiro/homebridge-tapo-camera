@@ -6,7 +6,7 @@ import {
   PlatformConfig,
 } from "homebridge";
 import { CameraAccessory, CameraConfig } from "./cameraAccessory";
-import { pkg } from "./pkg";
+import { PLUGIN_ID, PLATFORM_NAME } from "./pkg";
 
 export interface CameraPlatformConfig extends PlatformConfig {
   cameras?: CameraConfig[];
@@ -38,7 +38,7 @@ export class CameraPlatform implements IndependentPlatformPlugin {
   }
 
   private removeAccessory(platformAccessory: PlatformAccessory) {
-    this.api.unregisterPlatformAccessories(pkg.pluginId, pkg.platformName, [
+    this.api.unregisterPlatformAccessories(PLUGIN_ID, PLATFORM_NAME, [
       platformAccessory,
     ]);
   }
