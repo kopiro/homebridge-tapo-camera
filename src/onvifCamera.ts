@@ -59,7 +59,7 @@ export class OnvifCamera {
       if (event?.topic?._?.match(/RuleEngine\/CellMotionDetector\/Motion$/)) {
         const motion = event.message.message.data.simpleItem.$.Value;
         if (motion !== lastMotionValue) {
-          lastMotionValue = motion;
+          lastMotionValue = Boolean(motion);
           this.events = this.events || new EventEmitter();
           this.events.emit("motion", motion);
         }
