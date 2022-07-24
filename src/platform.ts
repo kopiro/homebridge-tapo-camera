@@ -65,12 +65,12 @@ export class TapoCameraPlatform implements IndependentPlatformPlugin {
    */
   registerDevices() {
     // Register cameras
-    this.config.cameras?.forEach((camera) => {
+    this.config.cameras?.forEach((cameraConfig) => {
 
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
       // number or MAC address
-      const uuid = this.api.hap.uuid.generate(camera.name);
+      const uuid = this.api.hap.uuid.generate(cameraConfig.name);
 
       // see if an accessory with the same uuid has already been registered and restored from
       // the cached devices we stored in the `configureAccessory` method above
@@ -84,10 +84,14 @@ export class TapoCameraPlatform implements IndependentPlatformPlugin {
         new CameraAccessory(this, existingAccessory);
       } else {
         // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', camera.name);
+        this.log.info('Adding new accessory:', cameraConfig.name);
 
         // create a new accessory
-        const accessory = new this.api.platformAccessory<CameraConfig>(camera.name, uuid, this.api.hap.Categories.CAMERA);
+        const accessory = new this.api.platformAccessory<CameraConfig>(cameraConfig.name, uuid, this.api.hap.Categories.CAMERA);
+
+        // store a copy of the device object in the `accessory.context`
+        // the `context` property can be used to store any data about the accessory you may need
+        accessory.context = cameraConfig;
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
