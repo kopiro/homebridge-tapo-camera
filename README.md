@@ -50,8 +50,8 @@ If you want to have manual control over the configuration, add the following con
 
           ipAddress: "__IP_ADDRESS__",
           password: "__PASSWORD__",
-          streamPassword: "__STREAM_PASSWORD__",
-          streamUser: "__STREAM_USER__",
+          streamPassword: "__STREAM_PASSWORD__", // Make sure that this password is only [A-Za-z0-9], no special chars allowed!
+          streamUser: "__STREAM_USER__", // Make sure that this password is only [A-Za-z0-9], no special chars allowed!
 
           // Optionals, don't put them in the config if you need the default values
           pullInterval: 60000, // Numbers of milliseconds after we update accessories by polling
