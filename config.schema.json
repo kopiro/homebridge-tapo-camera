@@ -37,14 +37,14 @@
             "title": "Stream User",
             "type": "string",
             "required": true,
-            "description": "Username to access the RTSP video feed (You can find them in TAPO app > Settings > Advanced Settings > Camera Account)",
+            "description": "Username to access the RTSP video feed (You can find them in TAPO app > Settings > Advanced Settings > Camera Account) - Note: This must be only alphanumeric [A-Za-z0-9], no special characters allowed!",
             "placeholder": "user"
           },
           "streamPassword": {
             "title": "Stream Password",
             "type": "string",
             "required": true,
-            "description": "Password to access the RTSP video feed (You can find them in TAPO app > Settings > Advanced Settings > Camera Account)"
+            "description": "Password to access the RTSP video feed (You can find them in TAPO app > Settings > Advanced Settings > Camera Account) - Note: This must be only alphanumeric [A-Za-z0-9], no special characters allowed!"
           },
           "pullInterval": {
             "title": "Pull Interval",
