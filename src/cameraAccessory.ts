@@ -97,15 +97,14 @@ export class CameraAccessory {
       })
       .onSet((status) => {
         this.log.debug(`Setting alarm to ${status ? "on" : "off"}`);
-        this.camera.setAlertConfig(Boolean(status))
-          .catch(err => {
-            this.log.error(
-              `[${this.config.name}]`,
-              "Error at 'setAlertConfig'.",
-              err
-            );
-            this.cameraStatus = undefined; // Home.app shows 'No Response'
-          });
+        this.camera.setAlertConfig(Boolean(status)).catch((err) => {
+          this.log.error(
+            `[${this.config.name}]`,
+            "Error at 'setAlertConfig'.",
+            err
+          );
+          this.cameraStatus = undefined; // Home.app shows 'No Response'
+        });
       });
   }
 
@@ -128,15 +127,14 @@ export class CameraAccessory {
       })
       .onSet((status) => {
         this.log.debug(`Setting privacy to ${status ? "on" : "off"}`);
-        this.camera.setLensMaskConfig(!status)
-          .catch(err => {
-            this.log.error(
-              `[${this.config.name}]`,
-              "Error at 'setLensMaskConfig'.",
-              err
-            );
-            this.cameraStatus = undefined; // Home.app shows 'No Response'
-          });
+        this.camera.setLensMaskConfig(!status).catch((err) => {
+          this.log.error(
+            `[${this.config.name}]`,
+            "Error at 'setLensMaskConfig'.",
+            err
+          );
+          this.cameraStatus = undefined; // Home.app shows 'No Response'
+        });
       });
   }
 
@@ -188,7 +186,11 @@ export class CameraAccessory {
 
     const eventEmitter = await this.camera.getEventEmitter();
     eventEmitter.addListener("motion", (motionDetected) => {
-      this.log.info(`[${this.config.name}]`, "Motion detected", motionDetected);
+      this.log.debug(
+        `[${this.config.name}]`,
+        "Motion detected",
+        motionDetected
+      );
 
       this.motionService?.updateCharacteristic(
         this.api.hap.Characteristic.MotionDetected,
