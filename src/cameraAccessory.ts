@@ -1,5 +1,6 @@
 import {
   API,
+  Characteristic,
   Logging,
   PlatformAccessory,
   PlatformAccessoryEvent,
@@ -9,13 +10,14 @@ import { StreamingDelegate } from "homebridge-camera-ffmpeg/dist/streamingDelega
 import { Logger } from "homebridge-camera-ffmpeg/dist/logger";
 import { TAPOCamera } from "./tapoCamera";
 import { PLUGIN_ID } from "./pkg";
-import { DeviceInformation } from "onvif";
+import { DeviceInformation } from "./types/onvif";
 import { CameraPlatform } from "./cameraPlatform";
 import { VideoConfig } from "homebridge-camera-ffmpeg/dist/configTypes";
 
 export type CameraConfig = {
   name: string;
   ipAddress: string;
+  username: string;
   password: string;
   streamUser: string;
   streamPassword: string;
@@ -80,11 +82,8 @@ export class CameraAccessory {
 
   private setupAlarmAccessory() {
     const name = `${this.config.name} - Alarm`;
-    this.alarmService = this.accessory.addService(
-      this.api.hap.Service.Switch,
-      name,
-      "alarm"
-    );
+    this.alarmService = new this.api.hap.Service.Switch(name, "alarm");
+    this.alarmService = this.accessory.addService(this.alarmService);
     this.alarmService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(() => {
@@ -96,7 +95,7 @@ export class CameraAccessory {
         return this.cameraStatus.alert;
       })
       .onSet((status) => {
-        this.log.debug(`Setting alarm to ${status ? "on" : "off"}`);
+        this.log.info(`Setting alarm to ${status ? "on" : "off"}`);
         this.camera.setAlertConfig(Boolean(status)).catch((err) => {
           this.log.error(
             `[${this.config.name}]`,
@@ -110,11 +109,9 @@ export class CameraAccessory {
 
   private setupPrivacyModeAccessory() {
     const name = `${this.config.name} - Eyes`;
-    this.privacyService = this.accessory.addService(
-      this.api.hap.Service.Switch,
-      name,
-      "eyes"
-    );
+    this.privacyService = new this.api.hap.Service.Switch(name, "privacy");
+    this.accessory.addService(this.privacyService);
+
     this.privacyService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
@@ -126,7 +123,7 @@ export class CameraAccessory {
         return !this.cameraStatus.lensMask;
       })
       .onSet((status) => {
-        this.log.debug(`Setting privacy to ${status ? "on" : "off"}`);
+        this.log.info(`Setting privacy to ${status ? "on" : "off"}`);
         this.camera.setLensMaskConfig(!status).catch((err) => {
           this.log.error(
             `[${this.config.name}]`,

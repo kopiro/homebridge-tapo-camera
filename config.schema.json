@@ -27,11 +27,17 @@
             "description": "Set the camera IP address",
             "placeholder": "192.168.0.XXX"
           },
+          "username": {
+            "title": "TAPO username",
+            "type": "string",
+            "required": false,
+            "description": "Most of the time you should leave this empty, defaulting to admin. If it doesn't work, try to use your streaming username (see below)"
+          },
           "password": {
             "title": "TAPO password",
             "type": "string",
             "required": true,
-            "description": "Password of your TAPO app (not the password for the RTSP configuration)"
+            "description": "Password of your TAPO Cloud (the one you use to login the application, not the password for the RTSP configuration). If it doesn't work, try to use your streaming password (see below)"
           },
           "streamUser": {
             "title": "Stream User",

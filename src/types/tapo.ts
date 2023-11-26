@@ -1,4 +1,4 @@
-declare type TAPOCameraRequest = {
+export type TAPOCameraUnencryptedRequest = {
   method: "multipleRequest";
   params: {
     requests: Array<
@@ -69,7 +69,24 @@ declare type TAPOCameraRequest = {
   };
 };
 
-declare type TAPOCameraResponseGetAlert = {
+export type TAPOCameraEncryptedRequest = {
+  method: "securePassthrough";
+  params: {
+    request: string;
+  };
+};
+
+export type TAPOCameraRequest =
+  | TAPOCameraUnencryptedRequest
+  | TAPOCameraEncryptedRequest;
+
+export type TAPOCameraEncryptedResponse = {
+  result: {
+    response: string;
+  };
+};
+
+export type TAPOCameraResponseGetAlert = {
   method: "getAlertConfig";
   result: {
     msg_alarm: {
@@ -86,7 +103,7 @@ declare type TAPOCameraResponseGetAlert = {
   error_code: number;
 };
 
-declare type TAPOCameraResponseGetLensMask = {
+export type TAPOCameraResponseGetLensMask = {
   method: "getLensMaskConfig";
   result: {
     lens_mask: {
@@ -100,13 +117,13 @@ declare type TAPOCameraResponseGetLensMask = {
   error_code: number;
 };
 
-declare type TAPOCameraResponseSet = {
+export type TAPOCameraResponseSet = {
   method: "setLensMaskConfig" | "setAlertConfig";
   result: object;
   error_code: number;
 };
 
-declare type TAPOCameraResponseDeviceInfo = {
+export type TAPOCameraResponseDeviceInfo = {
   method: "getDeviceInfo";
   result: {
     device_info: {
@@ -130,8 +147,9 @@ declare type TAPOCameraResponseDeviceInfo = {
   error_code: number;
 };
 
-declare type TAPOCameraResponse = {
+export type TAPOCameraResponse = {
   result: {
+    error_code: number;
     responses: Array<
       | TAPOCameraResponseGetAlert
       | TAPOCameraResponseGetLensMask

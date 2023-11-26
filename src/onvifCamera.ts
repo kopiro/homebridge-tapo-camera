@@ -1,11 +1,14 @@
 import { Logging } from "homebridge";
 import { CameraConfig } from "./cameraAccessory";
 import {
-  Cam,
   DeviceInformation,
   VideoSource,
   NotificationMessage,
-} from "onvif";
+  Cam as ICam,
+} from "./types/onvif";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { Cam } from "onvif";
 import { EventEmitter } from "stream";
 
 export class OnvifCamera {
@@ -19,20 +22,20 @@ export class OnvifCamera {
     protected readonly config: CameraConfig
   ) {}
 
-  private async getDevice(): Promise<Cam> {
+  private async getDevice(): Promise<ICam> {
     return new Promise((resolve, reject) => {
       if (this.device) {
         return resolve(this.device);
       }
 
-      const device: Cam = new Cam(
+      const device: ICam = new Cam(
         {
           hostname: this.config.ipAddress,
           username: this.config.streamUser,
           password: this.config.streamPassword,
           port: this.kOnvifPort,
         },
-        (err) => {
+        (err: Error) => {
           if (err) {
             return reject(err);
           }
