@@ -30,7 +30,6 @@
           "username": {
             "title": "TAPO username",
             "type": "string",
-            "required": false,
             "description": "Most of the time you should leave this empty, defaulting to admin. If it doesn't work, try to use your streaming username (see below)"
           },
           "password": {
@@ -87,7 +86,19 @@
             "title": "Low Quality",
             "type": "boolean",
             "description": "Video stream will be requested in low-quality (640x480) instead of HQ (1920x1080)"
-          }
+          },
+          "privacyAccessoryName": {
+            "title": "Privacy Accessory Name",
+            "type": "string",
+            "description": "Name of the Privacy accessory",
+            "placeholder": "Eyes"
+          },
+          "alarmAccessoryName": {
+            "title": "Alarm Accessory Name",
+            "type": "string",
+            "description": "Name of the Alarm accessory",
+            "placeholder": "Alarm"
+          },
         }
       }
     }

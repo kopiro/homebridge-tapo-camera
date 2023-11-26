@@ -30,6 +30,9 @@ export type CameraConfig = {
   lowQuality?: boolean;
 
   videoConfig?: VideoConfig;
+
+  privacyAccessoryName?: string;
+  alarmAccessoryName?: string;
 };
 
 export class CameraAccessory {
@@ -81,8 +84,12 @@ export class CameraAccessory {
   }
 
   private setupAlarmAccessory() {
-    const name = `${this.config.name} - Alarm`;
+    const name = this.config.alarmAccessoryName || "Alarm";
     this.alarmService = new this.api.hap.Service.Switch(name, "alarm");
+    this.alarmService.setCharacteristic(
+      this.api.hap.Characteristic.ConfiguredName,
+      name
+    );
     this.alarmService = this.accessory.addService(this.alarmService);
     this.alarmService
       .getCharacteristic(this.api.hap.Characteristic.On)
@@ -108,8 +115,12 @@ export class CameraAccessory {
   }
 
   private setupPrivacyModeAccessory() {
-    const name = `${this.config.name} - Eyes`;
+    const name = this.config.privacyAccessoryName || "Eyes";
     this.privacyService = new this.api.hap.Service.Switch(name, "privacy");
+    this.privacyService.setCharacteristic(
+      this.api.hap.Characteristic.ConfiguredName,
+      name
+    );
     this.accessory.addService(this.privacyService);
 
     this.privacyService
