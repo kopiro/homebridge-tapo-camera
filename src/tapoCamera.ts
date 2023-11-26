@@ -16,6 +16,20 @@ import type {
 
 const MAX_LOGIN_RETRIES = 3;
 const AES_BLOCK_SIZE = 16;
+const ERROR_CODES = {
+  "-40401": "Invalid stok value",
+  "-40210": "Function not supported",
+  "-64303": "Action cannot be done while camera is in patrol mode.",
+  "-64324": "Privacy mode is ON, not able to execute",
+  "-64302": "Preset ID not found",
+  "-64321": "Preset ID was deleted so no longer exists",
+  "-40106": "Parameter to get/do does not exist",
+  "-40105": "Method does not exist",
+  "-40101": "Parameter to set does not exist",
+  "-40209": "Invalid login credentials",
+  "-64304": "Maximum Pan/Tilt range reached",
+  "-71103": "User ID is not authorized",
+};
 
 export class TAPOCamera extends OnvifCamera {
   private readonly kStreamPort = 554;
@@ -591,5 +605,36 @@ export class TAPOCamera extends OnvifCamera {
       alert: alertConfig.result.msg_alarm.chn1_msg_alarm_info.enabled === "on",
       lensMask: lensMaskConfig.result.lens_mask.lens_mask_info.enabled === "on",
     };
+  }
+
+  async moveMotorStep(angle: number) {
+    const json = await this.apiRequest({
+      method: "do",
+      motor: {
+        movestep: {
+          direction: String(angle),
+        },
+      },
+    });
+
+    if (json.error_code !== 0) {
+      throw new Error("Failed to perform action");
+    }
+  }
+
+  async moveMotor(x: number, y: number) {
+    const json = await this.apiRequest({
+      method: "do",
+      motor: {
+        move: {
+          x_coord: String(x),
+          y_coord: String(y),
+        },
+      },
+    });
+
+    if (json.error_code !== 0) {
+      throw new Error("Failed to perform action");
+    }
   }
 }

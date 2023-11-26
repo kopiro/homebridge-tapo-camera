@@ -23,6 +23,8 @@ async function main() {
   const streamUrl = await tapoCamera.getAuthenticatedStreamUrl();
   console.log("streamUrl :>> ", streamUrl);
 
+  await tapoCamera.moveMotorStep(359);
+
   await tapoCamera.setLensMaskConfig(false);
   setTimeout(async () => {
     const status = await tapoCamera.getStatus();

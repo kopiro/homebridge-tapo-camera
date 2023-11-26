@@ -39,6 +39,7 @@ export class CameraAccessory {
   private readonly api: API = this.platform.api;
 
   private readonly camera: TAPOCamera = new TAPOCamera(this.log, this.config);
+
   private cameraStatus: { lensMask: boolean; alert: boolean } | undefined;
   private cameraInfo: DeviceInformation | undefined;
 
@@ -164,7 +165,7 @@ export class CameraAccessory {
     return config;
   }
 
-  private async setupCameraStreaming(deviceInfo: DeviceInformation) {
+  private setupCameraStreaming(deviceInfo: DeviceInformation) {
     const delegate = new StreamingDelegate(
       new Logger(this.log),
       {
@@ -182,6 +183,8 @@ export class CameraAccessory {
 
     this.accessory.configureController(delegate.controller);
   }
+
+  private setupPTZ() {}
 
   private async setupMotionDetectionAccessory() {
     const name = `${this.config.name} - Motion`;
@@ -223,7 +226,7 @@ export class CameraAccessory {
     alert: boolean;
     lensMask: boolean;
   }) {
-    this.platform.log.debug("Updating characteristics", { alert, lensMask });
+    this.log.debug("Updating characteristics", { alert, lensMask });
     this.alarmService
       ?.getCharacteristic(this.api.hap.Characteristic.On)
       .updateValue(alert);
@@ -238,7 +241,7 @@ export class CameraAccessory {
       this.updateCharacteristics(this.cameraStatus);
     } catch (err) {
       // When the camera stops responding or a token error occurs.
-      this.log.error("Error at 'getStatusAndUpdateCharacteristics'.", err);
+      this.log.error("Error at 'getStatusAndUpdateCharacteristics'", err);
       this.cameraStatus = undefined; // Home.app shows 'No Response'
     }
   }
@@ -270,7 +273,7 @@ export class CameraAccessory {
       // Setup the polling by giving a 3s random delay
       // to avoid all the cameras starting at the same time
       setTimeout(() => {
-        this.platform.log.debug(`[${this.config.name}]`, "Setup polling");
+        this.log.debug(`[${this.config.name}]`, "Setup polling");
         this.setupPolling();
       }, this.randomSeed * 3000);
     }

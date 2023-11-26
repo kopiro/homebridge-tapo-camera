@@ -1,73 +1,104 @@
-export type TAPOCameraUnencryptedRequest = {
-  method: "multipleRequest";
+export type TAPOCameraRequestGetDeviceInfo = {
+  method: "getDeviceInfo";
   params: {
-    requests: Array<
-      | {
-          method: "getDeviceInfo";
-          params: {
-            device_info: {
-              name: ["basic_info"];
-            };
-          };
-        }
-      | {
-          method: "getDayNightModeConfig";
-          params: {
-            image: {
-              name: "common";
-            };
-          };
-        }
-      | {
-          method: "getAlertConfig";
-          params: {
-            msg_alarm: {
-              name: "chn1_msg_alarm_info";
-            };
-          };
-        }
-      | {
-          method: "getAudioConfig";
-          params: {
-            audio_config: {
-              name: ["speaker", "microphone", "record_audio"];
-            };
-          };
-        }
-      | {
-          method: "getLensMaskConfig";
-          params: {
-            lens_mask: {
-              name: "lens_mask_info";
-            };
-          };
-        }
-      | {
-          method: "setLensMaskConfig";
-          params: {
-            lens_mask: {
-              lens_mask_info: {
-                enabled: "off" | "on";
-              };
-            };
-          };
-        }
-      | {
-          method: "setAlertConfig";
-          params: {
-            msg_alarm: {
-              chn1_msg_alarm_info: {
-                alarm_type?: "0" | "1";
-                alarm_mode?: ["sound" | "light"];
-                enabled: "on" | "off";
-                light_type?: "0" | "1";
-              };
-            };
-          };
-        }
-    >;
+    device_info: {
+      name: ["basic_info"];
+    };
   };
 };
+
+export type TAPOCameraRequestGetDayNightModeConfig = {
+  method: "getDayNightModeConfig";
+  params: {
+    image: {
+      name: "common";
+    };
+  };
+};
+
+export type TAPOCameraRequestGetAlertConfig = {
+  method: "getAlertConfig";
+  params: {
+    msg_alarm: {
+      name: "chn1_msg_alarm_info";
+    };
+  };
+};
+
+export type TAPOCameraRequestGetAudioConfig = {
+  method: "getAudioConfig";
+  params: {
+    audio_config: {
+      name: ["speaker", "microphone", "record_audio"];
+    };
+  };
+};
+
+export type TAPOCameraRequestGetLensMaskConfig = {
+  method: "getLensMaskConfig";
+  params: {
+    lens_mask: {
+      name: "lens_mask_info";
+    };
+  };
+};
+
+export type TAPOCameraRequestSetLensMaskConfig = {
+  method: "setLensMaskConfig";
+  params: {
+    lens_mask: {
+      lens_mask_info: {
+        enabled: "off" | "on";
+      };
+    };
+  };
+};
+
+export type TAPOCameraRequestSetAlertConfig = {
+  method: "setAlertConfig";
+  params: {
+    msg_alarm: {
+      chn1_msg_alarm_info: {
+        alarm_type?: "0" | "1";
+        alarm_mode?: ["sound" | "light"];
+        enabled: "on" | "off";
+        light_type?: "0" | "1";
+      };
+    };
+  };
+};
+
+export type TAPOCameraRequestMovestep = {
+  method: "do";
+  motor: { movestep: { direction: string } };
+};
+
+export type TAPOCameraRequestMove = {
+  method: "do";
+  motor: { move: { x_coord: string; y_coord: string } };
+};
+
+export type TAPOCameraRequestMultiple =
+  | TAPOCameraRequestGetDeviceInfo
+  | TAPOCameraRequestGetDayNightModeConfig
+  | TAPOCameraRequestGetAlertConfig
+  | TAPOCameraRequestGetAudioConfig
+  | TAPOCameraRequestGetLensMaskConfig
+  | TAPOCameraRequestSetLensMaskConfig
+  | TAPOCameraRequestSetAlertConfig;
+
+export type TAPOCameraRequestSingle =
+  | TAPOCameraRequestMovestep
+  | TAPOCameraRequestMove;
+
+export type TAPOCameraUnencryptedRequest =
+  | TAPOCameraRequestSingle
+  | {
+      method: "multipleRequest";
+      params: {
+        requests: Array<TAPOCameraRequestMultiple>;
+      };
+    };
 
 export type TAPOCameraEncryptedRequest = {
   method: "securePassthrough";
