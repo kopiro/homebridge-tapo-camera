@@ -1,5 +1,5 @@
 import { Logging } from "homebridge";
-import fetch, { RequestInit, Response } from "node-fetch";
+import fetch, { RequestInit } from "node-fetch";
 import https, { Agent } from "https";
 import { CameraConfig } from "./cameraAccessory";
 import crypto from "crypto";

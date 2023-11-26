@@ -1,6 +1,5 @@
 import {
   API,
-  Characteristic,
   Logging,
   PlatformAccessory,
   PlatformAccessoryEvent,

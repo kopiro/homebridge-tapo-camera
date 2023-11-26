@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import "dotenv/config";
 
 import { TAPOCamera } from "./tapoCamera";
 
 async function main() {
-  const tapoCamera = new TAPOCamera({ ...console, debug: () => {} } as any, {
+  const tapoCamera = new TAPOCamera({ ...console } as any, {
     name: "Test",
     ipAddress: process.env.CAMERA_IP!,
     username: process.env.CAMERA_USERNAME!,
