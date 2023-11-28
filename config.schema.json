@@ -98,7 +98,7 @@
             "type": "string",
             "description": "Name of the Alarm accessory",
             "placeholder": "Alarm"
-          },
+          }
         }
       }
     }

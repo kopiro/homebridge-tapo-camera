@@ -184,12 +184,9 @@ export class CameraAccessory {
   }
 
   private async setupMotionDetectionAccessory() {
-    const name = `${this.config.name} - Motion`;
-    this.motionService = this.accessory.addService(
-      this.api.hap.Service.MotionSensor,
-      name,
-      "alarm"
-    );
+    const name = `Motion Sensor`;
+    this.motionService = new this.api.hap.Service.MotionSensor(name, "motion");
+    this.accessory.addService(this.motionService);
 
     const eventEmitter = await this.camera.getEventEmitter();
     eventEmitter.addListener("motion", (motionDetected) => {
