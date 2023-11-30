@@ -197,59 +197,57 @@ export class TAPOCamera extends OnvifCamera {
       }
     }
 
-    if (isSecureConnection) {
-      const nonce = responseData?.result?.data?.nonce;
-      const deviceConfirm = responseData?.result?.data?.device_confirm;
+    const nonce = responseData?.result?.data?.nonce;
+    const deviceConfirm = responseData?.result?.data?.device_confirm;
 
-      if (
-        nonce &&
-        deviceConfirm &&
-        this.validateDeviceConfirm(nonce, deviceConfirm)
-      ) {
-        const digestPasswd = crypto
-          .createHash("sha256")
-          .update(this.getHashedPassword() + this.cnonce + nonce)
-          .digest("hex")
-          .toUpperCase();
+    if (isSecureConnection && nonce && deviceConfirm) {
+      if (!this.validateDeviceConfirm(nonce, deviceConfirm)) {
+        throw new Error("Invalid device confirm");
+      }
 
-        const digestPasswdFull = Buffer.concat([
-          Buffer.from(digestPasswd, "utf8"),
-          Buffer.from(this.cnonce!, "utf8"),
-          Buffer.from(nonce, "utf8"),
-        ]).toString("utf8");
+      const digestPasswd = crypto
+        .createHash("sha256")
+        .update(this.getHashedPassword() + this.cnonce + nonce)
+        .digest("hex")
+        .toUpperCase();
 
-        response = await this.fetch(`https://${this.config.ipAddress}`, {
-          method: "POST",
-          body: JSON.stringify({
-            method: "login",
-            params: {
-              cnonce: this.cnonce,
-              encrypt_type: "3",
-              digest_passwd: digestPasswdFull,
-              username: this.getUsername(),
-            },
-          }),
-        });
+      const digestPasswdFull = Buffer.concat([
+        Buffer.from(digestPasswd, "utf8"),
+        Buffer.from(this.cnonce!, "utf8"),
+        Buffer.from(nonce, "utf8"),
+      ]).toString("utf8");
 
-        responseData = await response.json();
+      response = await this.fetch(`https://${this.config.ipAddress}`, {
+        method: "POST",
+        body: JSON.stringify({
+          method: "login",
+          params: {
+            cnonce: this.cnonce,
+            encrypt_type: "3",
+            digest_passwd: digestPasswdFull,
+            username: this.getUsername(),
+          },
+        }),
+      });
 
-        this.log.debug(
-          "StokRefresh: Start_seq response :>>",
-          response.status,
-          JSON.stringify(responseData)
-        );
+      responseData = await response.json();
 
-        if (responseData?.result?.start_seq) {
-          if (responseData?.result?.user_group !== "root") {
-            // # encrypted control via 3rd party account does not seem to be supported
-            // # see https://github.com/JurajNyiri/HomeAssistant-Tapo-Control/issues/456
-            throw new Error("Incorrect user_group detected");
-          }
+      this.log.debug(
+        "StokRefresh: Start_seq response :>>",
+        response.status,
+        JSON.stringify(responseData)
+      );
 
-          this.lsk = this.generateEncryptionToken("lsk", nonce);
-          this.ivb = this.generateEncryptionToken("ivb", nonce);
-          this.seq = responseData.result.start_seq;
+      if (responseData?.result?.start_seq) {
+        if (responseData?.result?.user_group !== "root") {
+          // # encrypted control via 3rd party account does not seem to be supported
+          // # see https://github.com/JurajNyiri/HomeAssistant-Tapo-Control/issues/456
+          throw new Error("Incorrect user_group detected");
         }
+
+        this.lsk = this.generateEncryptionToken("lsk", nonce);
+        this.ivb = this.generateEncryptionToken("ivb", nonce);
+        this.seq = responseData.result.start_seq;
       }
     } else {
       this.passwordEncryptionMethod = "md5";
