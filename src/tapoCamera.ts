@@ -23,7 +23,7 @@ export class TAPOCamera extends OnvifCamera {
 
   private readonly hashedMD5Password: string;
   private readonly hashedSha256Password: string;
-  private passwordEncryptionMethod: "md5" | "sha256" | null = null;
+  private passwordEncryptionMethod: "md5" | "sha256" | null = "md5";
 
   private isSecureConnectionValue: boolean | null = null;
 
@@ -249,8 +249,6 @@ export class TAPOCamera extends OnvifCamera {
         this.ivb = this.generateEncryptionToken("ivb", nonce);
         this.seq = responseData.result.start_seq;
       }
-    } else {
-      this.passwordEncryptionMethod = "md5";
     }
 
     if (responseData?.result?.data?.sec_left > 0) {
