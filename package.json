@@ -45,7 +45,7 @@
   "dependencies": {
     "homebridge-camera-ffmpeg": "^3.1.4",
     "node-fetch": "^2.7.0",
-    "onvif": "^0.6.9"
+    "onvif": "github:agsh/onvif"
   },
   "devDependencies": {
     "@types/node": "^16.10.3",
