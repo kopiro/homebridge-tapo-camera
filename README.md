@@ -28,6 +28,12 @@ npm -g install homebridge-tapo-camera
 
 It is highly recommended that you use either Homebridge Config UI X or the HOOBS UI to install and configure this plugin.
 
+### FFmpeg installation
+
+The plugin should take care of installing the `ffmpeg` automatically.
+
+If you're getting errors like `FFmpeg exited with code: 1 and signal: null (Error)`, please install [ffmpeg-for-homebridge](https://github.com/homebridge/ffmpeg-for-homebridge) manually.
+
 ### Adding the unbridged accessory to Home
 
 Once done you will have unbridged accessories, therefore you need to manually add them in your Home app.
