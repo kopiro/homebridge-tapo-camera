@@ -37,38 +37,3 @@ If you're getting errors like `FFmpeg exited with code: 1 and signal: null (Erro
 ### Adding the unbridged accessory to Home
 
 Once done you will have unbridged accessories, therefore you need to manually add them in your Home app.
-
-### Manual configuration
-
-If you want to have manual control over the configuration, add the following configuration in the `platforms` key:
-
-```json5
-{
-  // ...
-  platforms: [
-    // Other platforms
-    {
-      // Note, if you've upgraded the plugin and you have no more camera in the Home app, you need to change this to "tapo-camera" lowercase (before v1.6.2 it was "TAPO-CAMERA")
-      platform: "tapo-camera",
-      cameras: [
-        {
-          name: "Adamo",
-
-          ipAddress: "__IP_ADDRESS__",
-          password: "__PASSWORD__",
-          streamPassword: "__STREAM_PASSWORD__", // This must be only alphanumeric [A-Za-z0-9], no special characters allowed!
-          streamUser: "__STREAM_USER__", // This must be only alphanumeric [A-Za-z0-9], no special characters allowed!
-
-          // An object containing a video-config passed to camera-ffmpeg
-          // Please check https://www.npmjs.com/package/homebridge-camera-ffmpeg for all the possible values\
-          // Make sure you don't override default values provided by this plugin unless you know what you're doing!
-          videoConfig: {}
-      ],
-    },
-  ],
-}
-```
-
-- `__IP_ADDRESS__` is the IP address of the camera in your local network; as long you have a bridge setup, you can also fully control the camera outside your Home.
-- `__PASSWORD__` is the password of your TAPO Cloud account, the username/email is not needed.
-- `__STREAM_USER__` and `__STREAM_PASSWORD__` are the credentials you set in Settings > Advanced Settings > Camera Account.
