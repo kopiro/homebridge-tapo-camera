@@ -81,7 +81,7 @@ export type TAPOCameraRequest =
   | TAPOCameraEncryptedRequest;
 
 export type TAPOCameraEncryptedResponse = {
-  result: {
+  result?: {
     response: string;
   };
 };

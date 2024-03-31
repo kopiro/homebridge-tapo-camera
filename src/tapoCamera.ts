@@ -443,7 +443,7 @@ export class TAPOCamera extends OnvifCamera {
 
           if (isSecureConnection) {
             const encryptedResponse = json as TAPOCameraEncryptedResponse;
-            if (encryptedResponse.result.response) {
+            if (encryptedResponse.result?.response) {
               const decryptedResponse = this.decryptResponse(
                 encryptedResponse.result.response
               );
