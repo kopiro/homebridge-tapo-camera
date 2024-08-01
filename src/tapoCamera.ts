@@ -675,7 +675,7 @@ export class TAPOCamera extends OnvifCamera {
     if (!lensMask) this.log.warn("No lens mask config found");
     if (!notifications) this.log.warn("No notifications config found");
     if (!motionDetection) this.log.warn("No motion detection config found");
-    if (!led) this.log.warn("No led status found");
+    if (!led) this.log.warn("No led config found");
 
     return {
       alarm: alert?.result.msg_alarm.chn1_msg_alarm_info.enabled === "on",

@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         # the Node.js versions to build on
-        node-version: [18.20.x, 20.16.x, 22.5.x]
+        node-version: [20.16.x, 22.5.x]
 
     steps:
       - uses: actions/checkout@v2
