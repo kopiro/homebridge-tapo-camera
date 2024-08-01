@@ -30,8 +30,11 @@ An example Home automation could be:
 
 ### Motion detection
 
-The motion detection is built on top of the ONVIF protocol and it is enabled by default; therefore you can set up
-automations and Homekit can send you notification when motion is detected.
+The motion detection is built on top of the ONVIF protocol and it is enabled by default.
+
+Therefore you can set up automations and Homekit can send you notification in the Home app when motion is detected.
+
+Make sure you activate "Activity Notifications" in the "Status and Notifications" tab in the accessory.
 
 ## Installation
 
