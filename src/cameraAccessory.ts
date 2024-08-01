@@ -129,6 +129,7 @@ export class CameraAccessory {
             this.cameraStatus = undefined; // Home.app shows 'No Response'
           });
       });
+
     this.accessory.addService(toggleService);
     this.toggleAccessories[tapoServiceStr] = toggleService;
   }

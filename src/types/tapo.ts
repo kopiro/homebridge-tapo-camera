@@ -160,7 +160,7 @@ export type TAPOCameraResponseGetMotionDetection = {
   error_code: number;
 };
 
-export type TAPOCameraResponseSet = {
+export type TAPOCameraResponseGenericSet = {
   method:
     | "setLensMaskConfig"
     | "setAlertConfig"
@@ -230,7 +230,7 @@ export type TAPOCameraResponse = {
       | TAPOCameraResponseGetLensMask
       | TAPOCameraResponseGetNotifications
       | TAPOCameraResponseGetMotionDetection
-      | TAPOCameraResponseSet
+      | TAPOCameraResponseGenericSet
       | TAPOCameraResponseDeviceInfo
     >;
   };

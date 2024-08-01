@@ -565,6 +565,16 @@ export class TAPOCamera extends OnvifCamera {
     if (responseData.error_code !== 0) {
       throw new Error(`Failed to perform ${service} action`);
     }
+
+    const method = TAPOCamera.SERVICE_MAP[service](value).method;
+    const operation = responseData.result.responses.find(
+      (e) => e.method === method
+    );
+    if (operation?.error_code !== 0) {
+      throw new Error(`Failed to perform ${service} action`);
+    }
+
+    return operation.result;
   }
 
   async getBasicInfo() {
@@ -630,18 +640,24 @@ export class TAPOCamera extends OnvifCamera {
       },
     });
 
-    const alertConfig = responseData.result.responses.find(
-      (r) => r.method === "getAlertConfig"
-    );
-    const lensMaskConfig = responseData.result.responses.find(
+    const operations = responseData.result.responses;
+
+    const alertConfig = operations.find((r) => r.method === "getAlertConfig");
+    const lensMaskConfig = operations.find(
       (r) => r.method === "getLensMaskConfig"
     );
-    const notificationsConfig = responseData.result.responses.find(
+    const notificationsConfig = operations.find(
       (r) => r.method === "getMsgPushConfig"
     );
-    const motionDetectionConfig = responseData.result.responses.find(
+    const motionDetectionConfig = operations.find(
       (r) => r.method === "getDetectionConfig"
     );
+
+    if (!alertConfig) this.log.warn("No alert config found");
+    if (!lensMaskConfig) this.log.warn("No lens mask config found");
+    if (!notificationsConfig) this.log.warn("No notifications config found");
+    if (!motionDetectionConfig)
+      this.log.warn("No motion detection config found");
 
     return {
       alarm: alertConfig?.result.msg_alarm.chn1_msg_alarm_info.enabled === "on",
