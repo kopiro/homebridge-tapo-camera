@@ -183,7 +183,7 @@ export type TAPOCameraResponseGetMotionDetection = {
 export type TAPOCameraResponseGetLed = {
   method: "getLedStatus";
   result: {
-    led_status: {
+    led: {
       config: {
         enabled: "on" | "off";
       };

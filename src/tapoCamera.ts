@@ -686,7 +686,7 @@ export class TAPOCamera extends OnvifCamera {
           .notification_enabled === "on",
       motionDetection:
         motionDetection?.result.motion_detection.motion_det.enabled === "on",
-      led: led?.result.led_status.config.enabled === "on",
+      led: led?.result.led.config.enabled === "on",
     };
   }
 }
