@@ -274,8 +274,12 @@ export class CameraAccessory {
       this.setupMotionSensorAccessory();
     }
 
-    // Only setup the polling if needed
-    await this.getStatusAndUpdateHomekitCharacteristics();
+    // Publish as external accessory
+
+    this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
+    this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
+      this.log.info("Identify requested", this.cameraInfo);
+    });
 
     // Setup the polling by giving a 3s random delay
     // to avoid all the cameras starting at the same time
@@ -283,10 +287,6 @@ export class CameraAccessory {
       this.setupPolling();
     }, this.randomSeed * 3000);
 
-    this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
-
-    this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log.info("Identify requested", this.cameraInfo);
-    });
+    this.getStatusAndUpdateHomekitCharacteristics();
   }
 }
