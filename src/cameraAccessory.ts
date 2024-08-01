@@ -198,8 +198,8 @@ export class CameraAccessory {
       clearInterval(this.pullIntervalTick);
     }
 
-    this.pullIntervalTick = setInterval(async () => {
-      await this.getStatusAndUpdateHomekitCharacteristics();
+    this.pullIntervalTick = setInterval(() => {
+      this.getStatusAndUpdateHomekitCharacteristics();
     }, this.config.pullInterval || this.platform.kDefaultPullInterval);
   }
 
