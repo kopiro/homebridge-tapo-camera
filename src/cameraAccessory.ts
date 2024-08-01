@@ -7,7 +7,7 @@ import {
 } from "homebridge";
 import { StreamingDelegate } from "homebridge-camera-ffmpeg/dist/streamingDelegate";
 import { Logger } from "homebridge-camera-ffmpeg/dist/logger";
-import { TAPOCamera } from "./tapoCamera";
+import { Status, TAPOCamera } from "./tapoCamera";
 import { PLUGIN_ID } from "./pkg";
 import { DeviceInformation } from "./types/onvif";
 import { CameraPlatform } from "./cameraPlatform";
@@ -23,49 +23,65 @@ export type CameraConfig = {
 
   pullInterval?: number;
   disableStreaming?: boolean;
-  disablePrivacyAccessory?: boolean;
-  disableAlarmAccessory?: boolean;
-  disableMotionAccessory?: boolean;
+  disableEyesToggleAccessory?: boolean;
+  disableAlarmToogleAccessory?: boolean;
+  disableNotificationsToggleAccessory?: boolean;
+  disableMotionDetectionToggleAccessory?: boolean;
+
+  disableMotionSensorAccessory?: boolean;
   lowQuality?: boolean;
 
   videoConfig?: VideoConfig;
 
-  privacyAccessoryName?: string;
-  alarmAccessoryName?: string;
+  eyesToggleAccessoryName?: string;
+  alarmToggleAccessoryName?: string;
+  notificationsToggleAccessoryName?: string;
+  motionDetectionToggleAccessoryName?: string;
 };
 
 export class CameraAccessory {
-  private readonly log: Logging = this.platform.log;
-  private readonly api: API = this.platform.api;
+  private readonly log: Logging;
+  private readonly api: API;
 
-  private readonly camera: TAPOCamera = new TAPOCamera(this.log, this.config);
-  private cameraStatus: { lensMask: boolean; alert: boolean } | undefined;
+  private readonly camera: TAPOCamera;
+  private cameraStatus: Status | undefined;
   private cameraInfo: DeviceInformation | undefined;
 
   private pullIntervalTick: NodeJS.Timeout | undefined;
 
-  private readonly accessory: PlatformAccessory =
-    new this.api.platformAccessory(
+  private readonly accessory: PlatformAccessory;
+
+  private infoAccessory: Service | undefined;
+  private toggleAccessories: Partial<Record<keyof Status, Service>> = {};
+
+  private motionSensorService: Service | undefined;
+
+  private readonly randomSeed = Math.random();
+
+  constructor(
+    private readonly platform: CameraPlatform,
+    private readonly config: CameraConfig
+  ) {
+    this.log = this.platform.log;
+    this.log.prefix = this.config.name;
+
+    this.api = this.platform.api;
+    this.accessory = new this.api.platformAccessory(
       this.config.name,
       this.api.hap.uuid.generate(this.config.name),
       this.api.hap.Categories.CAMERA
     );
-
-  private infoAccessory: Service | undefined;
-  private alarmService: Service | undefined;
-  private privacyService: Service | undefined;
-  private motionService: Service | undefined;
-
-  private readonly randomSeed = Math.random();
-
-  constructor(private platform: CameraPlatform, private config: CameraConfig) {}
+    this.camera = new TAPOCamera(this.log, this.config);
+  }
 
   private setupInfoAccessory(deviceInfo: DeviceInformation) {
     this.infoAccessory = this.accessory.getService(
       this.api.hap.Service.AccessoryInformation
     );
-    if (!this.infoAccessory) return;
-
+    if (!this.infoAccessory) {
+      this.infoAccessory = new this.api.hap.Service.AccessoryInformation();
+      this.accessory.addService(this.infoAccessory);
+    }
     this.infoAccessory
       .setCharacteristic(
         this.api.hap.Characteristic.Manufacturer,
@@ -82,15 +98,17 @@ export class CameraAccessory {
       );
   }
 
-  private setupAlarmAccessory() {
-    const name = this.config.alarmAccessoryName || "Alarm";
-    this.alarmService = new this.api.hap.Service.Switch(name, "alarm");
-    this.alarmService.setCharacteristic(
+  private setupToggleAccessory(name: string, tapoServiceStr: keyof Status) {
+    const toggleService = new this.api.hap.Service.Switch(name, tapoServiceStr);
+
+    // Add name
+    toggleService.setCharacteristic(this.api.hap.Characteristic.Name, name);
+    toggleService.setCharacteristic(
       this.api.hap.Characteristic.ConfiguredName,
       name
     );
-    this.alarmService = this.accessory.addService(this.alarmService);
-    this.alarmService
+
+    toggleService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(() => {
         if (!this.cameraStatus) {
@@ -98,51 +116,21 @@ export class CameraAccessory {
             this.api.hap.HAPStatus.RESOURCE_DOES_NOT_EXIST
           );
         }
-        return this.cameraStatus.alert;
+        return Boolean(this.cameraStatus[tapoServiceStr]);
       })
-      .onSet((status) => {
-        this.log.info(`Setting alarm to ${status ? "on" : "off"}`);
-        this.camera.setAlertConfig(Boolean(status)).catch((err) => {
-          this.log.error(
-            `[${this.config.name}]`,
-            "Error at 'setAlertConfig'.",
-            err
-          );
-          this.cameraStatus = undefined; // Home.app shows 'No Response'
-        });
+      .onSet((newValue) => {
+        this.log.info(
+          `Setting ${tapoServiceStr} to ${newValue ? "on" : "off"}`
+        );
+        this.camera
+          .setStatus(tapoServiceStr, Boolean(newValue))
+          .catch((err) => {
+            this.log.error(`Error at 'setStatus(${tapoServiceStr})'.`, err);
+            this.cameraStatus = undefined; // Home.app shows 'No Response'
+          });
       });
-  }
-
-  private setupPrivacyModeAccessory() {
-    const name = this.config.privacyAccessoryName || "Eyes";
-    this.privacyService = new this.api.hap.Service.Switch(name, "privacy");
-    this.privacyService.setCharacteristic(
-      this.api.hap.Characteristic.ConfiguredName,
-      name
-    );
-    this.accessory.addService(this.privacyService);
-
-    this.privacyService
-      .getCharacteristic(this.api.hap.Characteristic.On)
-      .onGet(async () => {
-        if (!this.cameraStatus) {
-          throw new this.api.hap.HapStatusError(
-            this.api.hap.HAPStatus.RESOURCE_DOES_NOT_EXIST
-          );
-        }
-        return !this.cameraStatus.lensMask;
-      })
-      .onSet((status) => {
-        this.log.info(`Setting privacy to ${status ? "on" : "off"}`);
-        this.camera.setLensMaskConfig(!status).catch((err) => {
-          this.log.error(
-            `[${this.config.name}]`,
-            "Error at 'setLensMaskConfig'.",
-            err
-          );
-          this.cameraStatus = undefined; // Home.app shows 'No Response'
-        });
-      });
+    this.accessory.addService(toggleService);
+    this.toggleAccessories[tapoServiceStr] = toggleService;
   }
 
   private getVideoConfig(): VideoConfig {
@@ -183,24 +171,23 @@ export class CameraAccessory {
     this.accessory.configureController(delegate.controller);
   }
 
-  private async setupMotionDetectionAccessory() {
-    const name = `Motion Sensor`;
-    this.motionService = new this.api.hap.Service.MotionSensor(name, "motion");
-    this.accessory.addService(this.motionService);
+  private async setupMotionSensorAccessory() {
+    this.motionSensorService = new this.api.hap.Service.MotionSensor(
+      "Motion Sensor",
+      "motion"
+    );
 
     const eventEmitter = await this.camera.getEventEmitter();
     eventEmitter.addListener("motion", (motionDetected) => {
-      this.log.debug(
-        `[${this.config.name}]`,
-        "Motion detected",
-        motionDetected
-      );
+      this.log.debug("Motion detected", motionDetected);
 
-      this.motionService?.updateCharacteristic(
+      this.motionSensorService?.updateCharacteristic(
         this.api.hap.Characteristic.MotionDetected,
         motionDetected
       );
     });
+
+    this.accessory.addService(this.motionSensorService);
   }
 
   private setupPolling() {
@@ -209,33 +196,30 @@ export class CameraAccessory {
     }
 
     this.pullIntervalTick = setInterval(async () => {
-      await this.getStatusAndUpdateCharacteristics();
+      await this.getStatusAndUpdateHomekitCharacteristics();
     }, this.config.pullInterval || this.platform.kDefaultPullInterval);
   }
 
-  private updateCharacteristics({
-    alert,
-    lensMask,
-  }: {
-    alert: boolean;
-    lensMask: boolean;
-  }) {
-    this.platform.log.debug("Updating characteristics", { alert, lensMask });
-    this.alarmService
-      ?.getCharacteristic(this.api.hap.Characteristic.On)
-      .updateValue(alert);
-    this.privacyService
-      ?.getCharacteristic(this.api.hap.Characteristic.On)
-      .updateValue(!lensMask);
+  private updateHomekitCharacteristics(status: Status) {
+    this.platform.log.debug("Updating characteristics", status);
+
+    for (const [key, value] of Object.entries(status)) {
+      const toggleService = this.toggleAccessories[key as keyof Status];
+      if (toggleService) {
+        toggleService
+          .getCharacteristic(this.api.hap.Characteristic.On)
+          .updateValue(Boolean(value));
+      }
+    }
   }
 
-  private async getStatusAndUpdateCharacteristics() {
+  private async getStatusAndUpdateHomekitCharacteristics() {
     try {
       this.cameraStatus = await this.camera.getStatus();
-      this.updateCharacteristics(this.cameraStatus);
+      this.updateHomekitCharacteristics(this.cameraStatus);
     } catch (err) {
       // When the camera stops responding or a token error occurs.
-      this.log.error("Error at 'getStatusAndUpdateCharacteristics'.", err);
+      this.log.error("Error when retrieving data", err);
       this.cameraStatus = undefined; // Home.app shows 'No Response'
     }
   }
@@ -248,38 +232,51 @@ export class CameraAccessory {
       this.setupCameraStreaming(this.cameraInfo);
     }
 
-    if (!this.config.disablePrivacyAccessory) {
-      this.setupPrivacyModeAccessory();
+    if (!this.config.disableEyesToggleAccessory) {
+      this.setupToggleAccessory(
+        this.config.eyesToggleAccessoryName || "Eyes",
+        "eyes"
+      );
     }
 
-    if (!this.config.disableAlarmAccessory) {
-      this.setupAlarmAccessory();
+    if (!this.config.disableAlarmToogleAccessory) {
+      this.setupToggleAccessory(
+        this.config.alarmToggleAccessoryName || "Alarm",
+        "alarm"
+      );
     }
 
-    if (!this.config.disableMotionAccessory) {
-      this.setupMotionDetectionAccessory();
+    if (!this.config.disableNotificationsToggleAccessory) {
+      this.setupToggleAccessory(
+        this.config.notificationsToggleAccessoryName || "Notifications",
+        "notifications"
+      );
+    }
+
+    if (!this.config.disableMotionDetectionToggleAccessory) {
+      this.setupToggleAccessory(
+        this.config.motionDetectionToggleAccessoryName || "Motion Detection",
+        "motionDetection"
+      );
+    }
+
+    if (!this.config.disableMotionSensorAccessory) {
+      this.setupMotionSensorAccessory();
     }
 
     // Only setup the polling if needed
-    if (this.privacyService || this.alarmService) {
-      await this.getStatusAndUpdateCharacteristics();
+    await this.getStatusAndUpdateHomekitCharacteristics();
 
-      // Setup the polling by giving a 3s random delay
-      // to avoid all the cameras starting at the same time
-      setTimeout(() => {
-        this.platform.log.debug(`[${this.config.name}]`, "Setup polling");
-        this.setupPolling();
-      }, this.randomSeed * 3000);
-    }
+    // Setup the polling by giving a 3s random delay
+    // to avoid all the cameras starting at the same time
+    setTimeout(() => {
+      this.setupPolling();
+    }, this.randomSeed * 3000);
 
     this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
 
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log.info(
-        `[${this.config.name}]`,
-        "Identify requested",
-        this.cameraInfo
-      );
+      this.log.info("Identify requested", this.cameraInfo);
     });
   }
 }

@@ -1,23 +1,25 @@
 {
 	"compilerOptions": {
-	  "target": "ES2018",
+	  "target": "ES2022",
 	  "module": "commonjs",
+	  "moduleResolution":"node",
 	  "lib": [
-		 "ES2015",
-		 "ES2016",
-		 "ES2017",
-		 "ES2018"
-	  ],
+      "DOM",
+      "ES2022"
+    ],
 	  "sourceMap": true,
 	  "rootDir": "src",
 	  "outDir": "dist",
 	  "resolveJsonModule": true,
 	  "strict": true,
 	  "esModuleInterop": true,
-	  "forceConsistentCasingInFileNames": true
+	  "forceConsistentCasingInFileNames": true,
+	  "allowSyntheticDefaultImports": true,
+	  "declaration": true,
 	},
 	"include": [
-	  "src"
+	  "src",
+	  "homebridge-ui",
 	],
 	"exclude": [
 		"**/*.spec.ts"

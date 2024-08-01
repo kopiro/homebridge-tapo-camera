@@ -1,21 +1,28 @@
 import { Logging } from "homebridge";
-import fetch, { RequestInit } from "node-fetch";
-import https, { Agent } from "https";
 import { CameraConfig } from "./cameraAccessory";
 import crypto from "crypto";
 import { OnvifCamera } from "./onvifCamera";
 import type {
   TAPOCameraEncryptedRequest,
   TAPOCameraEncryptedResponse,
+  TAPOCameraLoginResponse,
+  TAPOCameraRefreshStokResponse,
   TAPOCameraRequest,
   TAPOCameraResponse,
   TAPOCameraResponseDeviceInfo,
-  TAPOCameraResponseGetAlert,
-  TAPOCameraResponseGetLensMask,
+  TAPOCameraSingleRequest,
 } from "./types/tapo";
+import { Agent } from "undici";
 
 const MAX_LOGIN_RETRIES = 3;
 const AES_BLOCK_SIZE = 16;
+
+export type Status = {
+  eyes: boolean;
+  alarm: boolean;
+  notifications: boolean;
+  motionDetection: boolean;
+};
 
 export class TAPOCamera extends OnvifCamera {
   private readonly kStreamPort = 554;
@@ -35,16 +42,16 @@ export class TAPOCamera extends OnvifCamera {
   private seq: number | undefined;
   private stok: string | undefined;
 
-  private loginRetryCount = 0;
-
   constructor(
     protected readonly log: Logging,
     protected readonly config: CameraConfig
   ) {
     super(log, config);
 
-    this.httpsAgent = new https.Agent({
-      rejectUnauthorized: false,
+    this.httpsAgent = new Agent({
+      connect: {
+        rejectUnauthorized: false,
+      },
     });
 
     this.cnonce = this.generateCnonce();
@@ -65,8 +72,8 @@ export class TAPOCamera extends OnvifCamera {
     return this.config.username || "admin";
   }
 
-  private getHeaders() {
-    const headers: Record<string, string> = {
+  private getHeaders(): Record<string, string> {
+    return {
       Host: `https://${this.config.ipAddress}`,
       Referer: `https://${this.config.ipAddress}`,
       Accept: "application/json",
@@ -76,7 +83,6 @@ export class TAPOCamera extends OnvifCamera {
       requestByApp: "true",
       "Content-Type": "application/json; charset=UTF-8",
     };
-    return headers;
   }
 
   private getHashedPassword() {
@@ -91,8 +97,9 @@ export class TAPOCamera extends OnvifCamera {
 
   private fetch(url: string, data: RequestInit) {
     return fetch(url, {
-      agent: this.httpsAgent,
       headers: this.getHeaders(),
+      // @ts-expect-error Dispatcher type not there
+      dispatcher: this.httpsAgent,
       ...data,
     });
   }
@@ -183,7 +190,7 @@ export class TAPOCamera extends OnvifCamera {
       `https://${this.config.ipAddress}`,
       fetchParams
     );
-    responseData = await response.json();
+    responseData = (await response.json()) as TAPOCameraRefreshStokResponse;
 
     this.log.debug(
       "StokRefresh: Login response :>> ",
@@ -192,13 +199,13 @@ export class TAPOCamera extends OnvifCamera {
     );
 
     if (response.status === 401) {
-      if (responseData?.result?.data?.code === 40411) {
+      if (responseData.result?.data?.code === 40411) {
         throw new Error("Invalid credentials");
       }
     }
 
-    const nonce = responseData?.result?.data?.nonce;
-    const deviceConfirm = responseData?.result?.data?.device_confirm;
+    const nonce = responseData.result?.data?.nonce;
+    const deviceConfirm = responseData.result?.data?.device_confirm;
 
     if (isSecureConnection && nonce && deviceConfirm) {
       if (!this.validateDeviceConfirm(nonce, deviceConfirm)) {
@@ -230,7 +237,7 @@ export class TAPOCamera extends OnvifCamera {
         }),
       });
 
-      responseData = await response.json();
+      responseData = (await response.json()) as TAPOCameraRefreshStokResponse;
 
       this.log.debug(
         "StokRefresh: Start_seq response :>>",
@@ -251,7 +258,10 @@ export class TAPOCamera extends OnvifCamera {
       }
     }
 
-    if (responseData?.result?.data?.sec_left > 0) {
+    if (
+      responseData?.result?.data?.sec_left &&
+      responseData.result.data.sec_left > 0
+    ) {
       throw new Error(
         `StokRefresh: Temporary Suspension: Try again in ${responseData.result.data.sec_left} seconds`
       );
@@ -259,7 +269,8 @@ export class TAPOCamera extends OnvifCamera {
 
     if (
       responseData?.data?.code == -40404 &&
-      responseData?.data?.sec_left > 0
+      responseData?.data?.sec_left &&
+      responseData.data.sec_left > 0
     ) {
       throw new Error(
         `StokRefresh: Temporary Suspension: Try again in ${responseData.data.sec_left} seconds`
@@ -269,8 +280,6 @@ export class TAPOCamera extends OnvifCamera {
     if (responseData?.result?.stok) {
       this.stok = responseData.result.stok;
       this.log.debug("StokRefresh: Success :>>", this.stok);
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return this.stok!;
     }
 
@@ -301,13 +310,17 @@ export class TAPOCamera extends OnvifCamera {
           },
         }),
       });
-      const json = await response.json();
+      const responseData = (await response.json()) as TAPOCameraLoginResponse;
 
-      this.log.debug("isSecureConnection response :>> ", response.status, json);
+      this.log.debug(
+        "isSecureConnection response :>> ",
+        response.status,
+        responseData
+      );
 
       this.isSecureConnectionValue =
-        json.error_code == -40413 &&
-        json?.result?.data?.encrypt_type?.includes("3");
+        responseData?.error_code == -40413 &&
+        (responseData.result?.data?.encrypt_type || "")?.includes("3");
     }
 
     return this.isSecureConnectionValue;
@@ -439,21 +452,29 @@ export class TAPOCamera extends OnvifCamera {
           }
 
           const response = await this.fetch(url, fetchParams);
-          let json = await response.json();
+          const responseDataTmp = await response.json();
+          let responseData: TAPOCameraResponse | null = null;
 
           if (isSecureConnection) {
-            const encryptedResponse = json as TAPOCameraEncryptedResponse;
+            const encryptedResponse =
+              responseDataTmp as TAPOCameraEncryptedResponse;
             if (encryptedResponse.result?.response) {
               const decryptedResponse = this.decryptResponse(
                 encryptedResponse.result.response
               );
-              json = JSON.parse(decryptedResponse) as TAPOCameraResponse;
+              responseData = JSON.parse(
+                decryptedResponse
+              ) as TAPOCameraResponse;
             }
           } else {
-            json = json as TAPOCameraResponse;
+            responseData = responseDataTmp as TAPOCameraResponse;
           }
 
-          this.log.debug(`API response`, response.status, JSON.stringify(json));
+          this.log.debug(
+            `API response`,
+            response.status,
+            JSON.stringify(responseData)
+          );
 
           // Apparently the Tapo C200 returns 500 on successful requests,
           // but it's indicating an expiring token, therefore refresh the token next time
@@ -461,14 +482,21 @@ export class TAPOCamera extends OnvifCamera {
             this.stok = undefined;
           }
 
+          if (responseData === null) {
+            throw new Error("Invalid response data");
+          }
+
           // Check if we have to refresh the token
-          if (json.error_code === -40401 || json.error_code === -1) {
+          if (
+            responseData.error_code === -40401 ||
+            responseData.error_code === -1
+          ) {
             this.log.debug("API request failed, reauthenticating");
             this.stok = undefined;
             return this.apiRequest(req, loginRetryCount + 1);
           }
 
-          return json as TAPOCameraResponse;
+          return responseData;
         } finally {
           this.pendingAPIRequests.delete(reqJson);
         }
@@ -478,60 +506,69 @@ export class TAPOCamera extends OnvifCamera {
     return this.pendingAPIRequests.get(reqJson) as Promise<TAPOCameraResponse>;
   }
 
-  async setLensMaskConfig(value: boolean) {
-    this.log.debug("Processing setLensMaskConfig", value);
+  static SERVICE_MAP: Record<
+    keyof Status,
+    (value: boolean) => TAPOCameraSingleRequest
+  > = {
+    eyes: (value) => ({
+      method: "setLensMaskConfig",
+      params: {
+        lens_mask: {
+          lens_mask_info: {
+            // Watch out for the inversion
+            enabled: value ? "off" : "on",
+          },
+        },
+      },
+    }),
+    alarm: (value) => ({
+      method: "setAlertConfig",
+      params: {
+        msg_alarm: {
+          chn1_msg_alarm_info: {
+            enabled: value ? "on" : "off",
+          },
+        },
+      },
+    }),
+    notifications: (value) => ({
+      method: "setMsgPushConfig",
+      params: {
+        msg_push: {
+          chn1_msg_push_info: {
+            notification_enabled: value ? "on" : "off",
+            rich_notification_enabled: value ? "on" : "off",
+          },
+        },
+      },
+    }),
+    motionDetection: (value) => ({
+      method: "setDetectionConfig",
+      params: {
+        motion_detection: {
+          motion_det: {
+            enabled: value ? "on" : "off",
+          },
+        },
+      },
+    }),
+  };
 
-    const json = await this.apiRequest({
+  async setStatus(service: keyof Status, value: boolean) {
+    const responseData = await this.apiRequest({
       method: "multipleRequest",
       params: {
-        requests: [
-          {
-            method: "setLensMaskConfig",
-            params: {
-              lens_mask: {
-                lens_mask_info: {
-                  enabled: value ? "on" : "off",
-                },
-              },
-            },
-          },
-        ],
+        requests: [TAPOCamera.SERVICE_MAP[service](value)],
       },
     });
 
-    if (json.error_code !== 0) {
-      throw new Error("Failed to perform action");
-    }
-  }
-
-  async setAlertConfig(value: boolean) {
-    this.log.debug("Processing setAlertConfig", value);
-
-    const json = await this.apiRequest({
-      method: "multipleRequest",
-      params: {
-        requests: [
-          {
-            method: "setAlertConfig",
-            params: {
-              msg_alarm: {
-                chn1_msg_alarm_info: {
-                  enabled: value ? "on" : "off",
-                },
-              },
-            },
-          },
-        ],
-      },
-    });
-
-    if (json.error_code !== 0) {
-      throw new Error("Failed to perform action");
+    if (responseData.error_code !== 0) {
+      throw new Error(`Failed to perform ${service} action`);
     }
   }
 
   async getBasicInfo() {
-    const json = await this.apiRequest({
+    const responseData = await this.apiRequest({
       method: "multipleRequest",
       params: {
         requests: [
@@ -547,12 +584,13 @@ export class TAPOCamera extends OnvifCamera {
       },
     });
 
-    const info = json.result.responses[0] as TAPOCameraResponseDeviceInfo;
+    const info = responseData.result
+      .responses[0] as TAPOCameraResponseDeviceInfo;
     return info.result.device_info.basic_info;
   }
 
-  async getStatus(): Promise<{ lensMask: boolean; alert: boolean }> {
-    const json = await this.apiRequest({
+  async getStatus(): Promise<Status> {
+    const responseData = await this.apiRequest({
       method: "multipleRequest",
       params: {
         requests: [
@@ -572,20 +610,49 @@ export class TAPOCamera extends OnvifCamera {
               },
             },
           },
+          {
+            method: "getMsgPushConfig",
+            params: {
+              msg_push: {
+                name: "chn1_msg_push_info",
+              },
+            },
+          },
+          {
+            method: "getDetectionConfig",
+            params: {
+              motion_detection: {
+                name: "motion_det",
+              },
+            },
+          },
         ],
       },
     });
 
-    const alertConfig = json.result.responses.find(
+    const alertConfig = responseData.result.responses.find(
       (r) => r.method === "getAlertConfig"
-    ) as TAPOCameraResponseGetAlert;
-    const lensMaskConfig = json.result.responses.find(
+    );
+    const lensMaskConfig = responseData.result.responses.find(
       (r) => r.method === "getLensMaskConfig"
-    ) as TAPOCameraResponseGetLensMask;
+    );
+    const notificationsConfig = responseData.result.responses.find(
+      (r) => r.method === "getMsgPushConfig"
+    );
+    const motionDetectionConfig = responseData.result.responses.find(
+      (r) => r.method === "getDetectionConfig"
+    );
 
     return {
-      alert: alertConfig.result.msg_alarm.chn1_msg_alarm_info.enabled === "on",
-      lensMask: lensMaskConfig.result.lens_mask.lens_mask_info.enabled === "on",
+      alarm: alertConfig?.result.msg_alarm.chn1_msg_alarm_info.enabled === "on",
+      // Watch out for the inversion
+      eyes: lensMaskConfig?.result.lens_mask.lens_mask_info.enabled === "off",
+      notifications:
+        notificationsConfig?.result.msg_push.chn1_msg_push_info
+          .notification_enabled === "on",
+      motionDetection:
+        motionDetectionConfig?.result.motion_detection.motion_det.enabled ===
+        "on",
     };
   }
 }
