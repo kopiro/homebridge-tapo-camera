@@ -23,7 +23,7 @@ The plugin exposes the camera RTSP video feed, and toggle accessories to configu
 
 An example Home automation could be:
 
-- When leaving home, enable *Eyes, Alarm, Notifications, Motion Detection*
+- When leaving home, enable *Eyes, Alarm, Notifications, Motion Detection, LED*
 - When arriving home:
 	- If you care about your privacy, disable *Eyes* to switch on privacy mode
 	- If you want the camera always on, but no notifications, just disable *Alarm* and *Notifications*
