@@ -19,6 +19,8 @@ The plugin exposes the camera RTSP video feed, and toggle accessories to configu
 
 - _"Motion Detection"_ switches on/off the motion detection system.
 
+- _"LED"_ switches on/off the LED.
+
 An example Home automation could be:
 
 - When leaving home, enable *Eyes, Alarm, Notifications, Motion Detection*
