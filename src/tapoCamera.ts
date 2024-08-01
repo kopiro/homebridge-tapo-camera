@@ -480,19 +480,17 @@ export class TAPOCamera extends OnvifCamera {
           // Apparently the Tapo C200 returns 500 on successful requests,
           // but it's indicating an expiring token, therefore refresh the token next time
           if (isSecureConnection && response.status === 500) {
+            this.log.debug("Stok expired, reauthenticating");
             this.stok = undefined;
-          }
-
-          if (responseData === null) {
-            throw new Error("Invalid response data");
           }
 
           // Check if we have to refresh the token
           if (
+            !responseData ||
             responseData.error_code === -40401 ||
             responseData.error_code === -1
           ) {
-            this.log.debug("API request failed, reauthenticating");
+            this.log.debug("API request failed, trying reauth");
             this.stok = undefined;
             return this.apiRequest(req, loginRetryCount + 1);
           }
