@@ -650,10 +650,8 @@ export class TAPOCamera extends OnvifCamera {
           {
             method: "getLedStatus",
             params: {
-              led_status: {
-                config: {
-                  enabled: "on",
-                },
+              led: {
+                name: "config",
               },
             },
           },

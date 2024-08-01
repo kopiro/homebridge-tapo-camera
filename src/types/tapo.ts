@@ -42,10 +42,8 @@ export type TAPOCameraGetRequest =
   | {
       method: "getLedStatus";
       params: {
-        led_status: {
-          config: {
-            enabled: "on" | "off";
-          };
+        led: {
+          name: "config";
         };
       };
     };
