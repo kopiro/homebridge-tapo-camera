@@ -27,6 +27,7 @@ export type CameraConfig = {
   disableAlarmToogleAccessory?: boolean;
   disableNotificationsToggleAccessory?: boolean;
   disableMotionDetectionToggleAccessory?: boolean;
+  disableLedToggleAccessory?: boolean;
 
   disableMotionSensorAccessory?: boolean;
   lowQuality?: boolean;
@@ -37,6 +38,7 @@ export type CameraConfig = {
   alarmToggleAccessoryName?: string;
   notificationsToggleAccessoryName?: string;
   motionDetectionToggleAccessoryName?: string;
+  ledToggleAccessoryName?: string;
 };
 
 export class CameraAccessory {
@@ -258,6 +260,13 @@ export class CameraAccessory {
       this.setupToggleAccessory(
         this.config.motionDetectionToggleAccessoryName || "Motion Detection",
         "motionDetection"
+      );
+    }
+
+    if (!this.config.disableLedToggleAccessory) {
+      this.setupToggleAccessory(
+        this.config.ledToggleAccessoryName || "LED",
+        "led"
       );
     }
 

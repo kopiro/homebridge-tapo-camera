@@ -87,6 +87,11 @@
             "type": "boolean",
             "description": "Disables the Motion Detection switch accessory"
           },
+          "disableLEDToggleAccessory": {
+            "title": "Disable LED toggle",
+            "type": "boolean",
+            "description": "Disables the LED switch accessory"
+          },
           "disableMotionSensorAccessory": {
             "title": "Disable Motion sensor",
             "type": "boolean",
@@ -120,6 +125,12 @@
             "type": "string",
             "description": "Name of the Motion Detection toggle",
             "placeholder": "Motion Detection"
+          },
+          "ledToggleAccessoryName": {
+            "title": "LED toggle Name",
+            "type": "string",
+            "description": "Name of the LED toggle",
+            "placeholder": "LED"
           }
         }
       }

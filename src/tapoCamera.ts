@@ -10,7 +10,7 @@ import type {
   TAPOCameraRequest,
   TAPOCameraResponse,
   TAPOCameraResponseDeviceInfo,
-  TAPOCameraSingleRequest,
+  TAPOCameraSetRequest,
 } from "./types/tapo";
 import { Agent } from "undici";
 
@@ -22,6 +22,7 @@ export type Status = {
   alarm: boolean;
   notifications: boolean;
   motionDetection: boolean;
+  led: boolean;
 };
 
 export class TAPOCamera extends OnvifCamera {
@@ -508,7 +509,7 @@ export class TAPOCamera extends OnvifCamera {
 
   static SERVICE_MAP: Record<
     keyof Status,
-    (value: boolean) => TAPOCameraSingleRequest
+    (value: boolean) => TAPOCameraSetRequest
   > = {
     eyes: (value) => ({
       method: "setLensMaskConfig",
@@ -547,6 +548,16 @@ export class TAPOCamera extends OnvifCamera {
       params: {
         motion_detection: {
           motion_det: {
+            enabled: value ? "on" : "off",
+          },
+        },
+      },
+    }),
+    led: (value) => ({
+      method: "setLedStatus",
+      params: {
+        led: {
+          config: {
             enabled: value ? "on" : "off",
           },
         },
@@ -636,39 +647,48 @@ export class TAPOCamera extends OnvifCamera {
               },
             },
           },
+          {
+            method: "getLedStatus",
+            params: {
+              led_status: {
+                config: {
+                  enabled: "on",
+                },
+              },
+            },
+          },
         ],
       },
     });
 
     const operations = responseData.result.responses;
 
-    const alertConfig = operations.find((r) => r.method === "getAlertConfig");
-    const lensMaskConfig = operations.find(
-      (r) => r.method === "getLensMaskConfig"
-    );
-    const notificationsConfig = operations.find(
+    const alert = operations.find((r) => r.method === "getAlertConfig");
+    const lensMask = operations.find((r) => r.method === "getLensMaskConfig");
+    const notifications = operations.find(
       (r) => r.method === "getMsgPushConfig"
     );
-    const motionDetectionConfig = operations.find(
+    const motionDetection = operations.find(
       (r) => r.method === "getDetectionConfig"
     );
+    const led = operations.find((r) => r.method === "getLedStatus");
 
-    if (!alertConfig) this.log.warn("No alert config found");
-    if (!lensMaskConfig) this.log.warn("No lens mask config found");
-    if (!notificationsConfig) this.log.warn("No notifications config found");
-    if (!motionDetectionConfig)
-      this.log.warn("No motion detection config found");
+    if (!alert) this.log.warn("No alert config found");
+    if (!lensMask) this.log.warn("No lens mask config found");
+    if (!notifications) this.log.warn("No notifications config found");
+    if (!motionDetection) this.log.warn("No motion detection config found");
+    if (!led) this.log.warn("No led status found");
 
     return {
-      alarm: alertConfig?.result.msg_alarm.chn1_msg_alarm_info.enabled === "on",
+      alarm: alert?.result.msg_alarm.chn1_msg_alarm_info.enabled === "on",
       // Watch out for the inversion
-      eyes: lensMaskConfig?.result.lens_mask.lens_mask_info.enabled === "off",
+      eyes: lensMask?.result.lens_mask.lens_mask_info.enabled === "off",
       notifications:
-        notificationsConfig?.result.msg_push.chn1_msg_push_info
+        notifications?.result.msg_push.chn1_msg_push_info
           .notification_enabled === "on",
       motionDetection:
-        motionDetectionConfig?.result.motion_detection.motion_det.enabled ===
-        "on",
+        motionDetection?.result.motion_detection.motion_det.enabled === "on",
+      led: led?.result.led_status.config.enabled === "on",
     };
   }
 }
