@@ -204,12 +204,9 @@ export class CameraAccessory {
   }
 
   private setupPolling() {
-    if (this.pullIntervalTick) {
-      clearInterval(this.pullIntervalTick);
-    }
-
-    this.pullIntervalTick = setInterval(async () => {
-      await this.getStatusAndUpdateCharacteristics();
+    if (this.pullIntervalTick) clearInterval(this.pullIntervalTick);
+    this.pullIntervalTick = setInterval(() => {
+      this.getStatusAndUpdateCharacteristics();
     }, this.config.pullInterval || this.platform.kDefaultPullInterval);
   }
 
@@ -235,7 +232,7 @@ export class CameraAccessory {
       this.updateCharacteristics(this.cameraStatus);
     } catch (err) {
       // When the camera stops responding or a token error occurs.
-      this.log.error("Error at 'getStatusAndUpdateCharacteristics'.", err);
+      this.log.error("Error at getStatusAndUpdateCharacteristics", err);
       this.cameraStatus = undefined; // Home.app shows 'No Response'
     }
   }
@@ -262,7 +259,7 @@ export class CameraAccessory {
 
     // Only setup the polling if needed
     if (this.privacyService || this.alarmService) {
-      await this.getStatusAndUpdateCharacteristics();
+      this.getStatusAndUpdateCharacteristics();
 
       // Setup the polling by giving a 3s random delay
       // to avoid all the cameras starting at the same time
