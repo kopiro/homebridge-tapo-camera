@@ -111,6 +111,8 @@ export class CameraAccessory {
     toggleService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
+        this.log.debug(`Getting "${tapoServiceStr}" status...`);
+
         const cameraStatus = await this.camera.getStatus();
         const value = cameraStatus[tapoServiceStr];
         if (value !== undefined) {
@@ -122,7 +124,7 @@ export class CameraAccessory {
       })
       .onSet(async (newValue) => {
         this.log.info(
-          `Setting ${tapoServiceStr} to ${newValue ? "on" : "off"}`
+          `Setting "${tapoServiceStr}" to ${newValue ? "on" : "off"}...`
         );
         this.camera.setStatus(tapoServiceStr, Boolean(newValue));
       });
