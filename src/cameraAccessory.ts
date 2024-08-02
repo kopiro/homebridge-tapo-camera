@@ -201,7 +201,7 @@ export class CameraAccessory {
   private async getStatusAndNotify() {
     try {
       const cameraStatus = await this.camera.getStatus();
-      this.platform.log.debug("New values", cameraStatus);
+      this.platform.log.debug("Notifying new values", cameraStatus);
 
       for (const [key, value] of Object.entries(cameraStatus)) {
         const toggleService = this.toggleAccessories[key as keyof Status];
