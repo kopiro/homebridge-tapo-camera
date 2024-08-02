@@ -56,7 +56,7 @@ export class OnvifCamera {
     let lastMotionValue = false;
 
     this.events = new EventEmitter();
-    this.log.debug(`[${this.config.name}]`, "Starting ONVIF listener");
+    this.log.debug("Starting ONVIF listener");
 
     onvifDevice.on("event", (event: NotificationMessage) => {
       if (event?.topic?._?.match(/RuleEngine\/CellMotionDetector\/Motion$/)) {

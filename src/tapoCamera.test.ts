@@ -20,10 +20,10 @@ async function main() {
   const status = await tapoCamera.getStatus();
   console.log("status :>> ", status);
 
-  const streamUrl = await tapoCamera.getAuthenticatedStreamUrl();
+  const streamUrl = tapoCamera.getAuthenticatedStreamUrl();
   console.log("streamUrl :>> ", streamUrl);
 
-  await tapoCamera.setLensMaskConfig(false);
+  await tapoCamera.setStatus("eyes", false);
   setTimeout(async () => {
     const status = await tapoCamera.getStatus();
     console.log("status :>> ", status);

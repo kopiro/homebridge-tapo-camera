@@ -6,15 +6,35 @@ Make your TP-Link TAPO security camera compatible with Homekit through Homebridg
 
 ![photo_2021-11-23 11 57 48](https://user-images.githubusercontent.com/839700/143013358-9f6eed44-3aad-40b0-b1e5-ddc2c5bb24e4.png)
 
-The plugin exposes the camera RTSP video feed, 2 accessories to control "Privacy Mode" and "Alarm" and a motion detection accessory.
+The plugin exposes the camera RTSP video feed, and toggle accessories to configure your automations.
 
-The accessory called _"Eyes"_ controls the privacy mode; when it's on it means that the camera is able to see
-(this is to make sure we support the command "Hey Siri, turn _on_ Camera", as this will _disable_ privacy mode and enable alarm).
+### Toggle accessories
 
-The accessory called _"Alarm"_ switches on/off the alarm sound, but keep in mind that notifications will still be sent to the phone.
+- _"Eyes"_ controls the privacy mode; when it's on it means that the camera is able to see
+(this is to make sure we support the command "Hey Siri, turn _on_ Camera", as this will _disable_ privacy mode).
 
-The motion detection is built on top of the ONVIF protocol and it is enabled by default; therefore you can set up
-automations and Homekit can send you notification when motion is detected.
+- _"Alarm"_ switches on/off the alarm sound.
+
+- _"Notifications"_ switches on/off the notifications sent to your TAPO app.
+
+- _"Motion Detection"_ switches on/off the motion detection system.
+
+- _"LED"_ switches on/off the LED.
+
+An example Home automation could be:
+
+- When leaving home, enable *Eyes, Alarm, Notifications, Motion Detection, LED*
+- When arriving home:
+	- If you care about your privacy, disable *Eyes* to switch on privacy mode
+	- If you want the camera always on, but no notifications, just disable *Alarm* and *Notifications*
+
+### Motion detection
+
+The motion detection is built on top of the ONVIF protocol and it is enabled by default.
+
+Therefore you can set up automations and Homekit can send you notification in the Home app when motion is detected.
+
+Make sure you activate "Activity Notifications" in the "Status and Notifications" tab in the accessory.
 
 ## Installation
 
@@ -32,7 +52,7 @@ It is highly recommended that you use either Homebridge Config UI X or the HOOBS
 
 The plugin should take care of installing the `ffmpeg` automatically.
 
-If you're getting errors like `FFmpeg exited with code: 1 and signal: null (Error)`, please install [ffmpeg-for-homebridge](https://github.com/homebridge/ffmpeg-for-homebridge) manually.
+If you're getting errors like `FFmpeg exited with code: 1 and signal: null (Error)`, please follow the instructions here on how to install [ffmpeg-for-homebridge](https://github.com/homebridge/ffmpeg-for-homebridge) binaries manually.
 
 ### Adding the unbridged accessory to Home
 

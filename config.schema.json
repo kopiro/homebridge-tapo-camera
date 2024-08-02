@@ -67,37 +67,70 @@
             "type": "boolean",
             "description": "Disables the video feed accessory"
           },
-          "disablePrivacyAccessory": {
-            "title": "Disable Privacy",
+          "disableEyesToggleAccessory": {
+            "title": "Disable Eyes toggle",
             "type": "boolean",
-            "description": "Disables the privacy mode switch accessory"
+            "description": "Disables the eyes (privacy mode) switch accessory"
           },
-          "disableAlarmAccessory": {
-            "title": "Disable Alarm",
+          "disableAlarmToggleAccessory": {
+            "title": "Disable Alarm toggle",
             "type": "boolean",
             "description": "Disables the Alarm switch accessory"
           },
-          "disableMotionAccessory": {
-            "title": "Disable Motion",
+          "disableNotificationsToggleAccessory": {
+            "title": "Disable Notifications toggle",
             "type": "boolean",
-            "description": "Disables the Motion Detection accessory"
+            "description": "Disables the Notifications switch accessory"
+          },
+          "disableMotionDetectionToggleAccessory": {
+            "title": "Disable Motion Detection toggle",
+            "type": "boolean",
+            "description": "Disables the Motion Detection switch accessory"
+          },
+          "disableLEDToggleAccessory": {
+            "title": "Disable LED toggle",
+            "type": "boolean",
+            "description": "Disables the LED switch accessory"
+          },
+          "disableMotionSensorAccessory": {
+            "title": "Disable Motion sensor",
+            "type": "boolean",
+            "description": "Disables the Motion sensor accessory"
           },
           "lowQuality": {
             "title": "Low Quality",
             "type": "boolean",
             "description": "Video stream will be requested in low-quality (640x480) instead of HQ (1920x1080)"
           },
-          "privacyAccessoryName": {
-            "title": "Privacy Accessory Name",
+          "eyesToggleAccessoryName": {
+            "title": "Eyes (privacy mode) toggle Name",
             "type": "string",
-            "description": "Name of the Privacy accessory",
+            "description": "Name of the Eyes toggle",
             "placeholder": "Eyes"
           },
-          "alarmAccessoryName": {
-            "title": "Alarm Accessory Name",
+          "alarmToggleAccessoryName": {
+            "title": "Alarm toggle Name",
             "type": "string",
-            "description": "Name of the Alarm accessory",
+            "description": "Name of the Alarm toggle",
             "placeholder": "Alarm"
+          },
+          "notificationsToggleAccessoryName": {
+            "title": "Notifications toggle Name",
+            "type": "string",
+            "description": "Name of the Notifications toggle",
+            "placeholder": "Notifications"
+          },
+          "motionDetectionToggleAccessoryName": {
+            "title": "Motion Detection toggle Name",
+            "type": "string",
+            "description": "Name of the Motion Detection toggle",
+            "placeholder": "Motion Detection"
+          },
+          "ledToggleAccessoryName": {
+            "title": "LED toggle Name",
+            "type": "string",
+            "description": "Name of the LED toggle",
+            "placeholder": "LED"
           }
         }
       }
