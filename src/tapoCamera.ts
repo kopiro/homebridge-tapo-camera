@@ -12,17 +12,17 @@ import type {
   TAPOCameraResponseDeviceInfo,
   TAPOCameraSetRequest,
 } from "./types/tapo";
-import { Agent } from "undici";
+import { Agent } from "https";
 
 const MAX_LOGIN_RETRIES = 3;
 const AES_BLOCK_SIZE = 16;
 
 export type Status = {
-  eyes: boolean;
-  alarm: boolean;
-  notifications: boolean;
-  motionDetection: boolean;
-  led: boolean;
+  eyes: boolean | undefined;
+  alarm: boolean | undefined;
+  notifications: boolean | undefined;
+  motionDetection: boolean | undefined;
+  led: boolean | undefined;
 };
 
 export class TAPOCamera extends OnvifCamera {
@@ -50,9 +50,7 @@ export class TAPOCamera extends OnvifCamera {
     super(log, config);
 
     this.httpsAgent = new Agent({
-      connect: {
-        rejectUnauthorized: false,
-      },
+      rejectUnauthorized: false,
     });
 
     this.cnonce = this.generateCnonce();
@@ -676,15 +674,21 @@ export class TAPOCamera extends OnvifCamera {
     if (!led) this.log.warn("No led config found");
 
     return {
-      alarm: alert?.result.msg_alarm.chn1_msg_alarm_info.enabled === "on",
+      alarm: alert
+        ? alert.result.msg_alarm.chn1_msg_alarm_info.enabled === "on"
+        : undefined,
       // Watch out for the inversion
-      eyes: lensMask?.result.lens_mask.lens_mask_info.enabled === "off",
-      notifications:
-        notifications?.result.msg_push.chn1_msg_push_info
-          .notification_enabled === "on",
-      motionDetection:
-        motionDetection?.result.motion_detection.motion_det.enabled === "on",
-      led: led?.result.led.config.enabled === "on",
+      eyes: lensMask
+        ? lensMask.result.lens_mask.lens_mask_info.enabled === "off"
+        : undefined,
+      notifications: notifications
+        ? notifications.result.msg_push.chn1_msg_push_info
+            .notification_enabled === "on"
+        : undefined,
+      motionDetection: motionDetection
+        ? motionDetection.result.motion_detection.motion_det.enabled === "on"
+        : undefined,
+      led: led ? led.result.led.config.enabled === "on" : undefined,
     };
   }
 }

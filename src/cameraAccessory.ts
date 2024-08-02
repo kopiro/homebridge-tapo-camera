@@ -118,7 +118,13 @@ export class CameraAccessory {
             this.api.hap.HAPStatus.RESOURCE_DOES_NOT_EXIST
           );
         }
-        return Boolean(this.cameraStatus[tapoServiceStr]);
+        const value = this.cameraStatus[tapoServiceStr];
+        if (value === undefined) {
+          throw new this.api.hap.HapStatusError(
+            this.api.hap.HAPStatus.RESOURCE_DOES_NOT_EXIST
+          );
+        }
+        return value;
       })
       .onSet((newValue) => {
         this.log.info(
@@ -208,10 +214,10 @@ export class CameraAccessory {
 
     for (const [key, value] of Object.entries(status)) {
       const toggleService = this.toggleAccessories[key as keyof Status];
-      if (toggleService) {
+      if (toggleService && value !== undefined) {
         toggleService
           .getCharacteristic(this.api.hap.Characteristic.On)
-          .updateValue(Boolean(value));
+          .updateValue(value);
       }
     }
   }
