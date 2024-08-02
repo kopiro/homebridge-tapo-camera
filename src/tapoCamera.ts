@@ -12,7 +12,7 @@ import type {
   TAPOCameraResponseDeviceInfo,
   TAPOCameraSetRequest,
 } from "./types/tapo";
-import { Agent } from "https";
+import { Agent } from "undici";
 
 const MAX_LOGIN_RETRIES = 3;
 const AES_BLOCK_SIZE = 16;
@@ -50,7 +50,9 @@ export class TAPOCamera extends OnvifCamera {
     super(log, config);
 
     this.httpsAgent = new Agent({
-      rejectUnauthorized: false,
+      connect: {
+        rejectUnauthorized: false,
+      },
     });
 
     this.cnonce = this.generateCnonce();
