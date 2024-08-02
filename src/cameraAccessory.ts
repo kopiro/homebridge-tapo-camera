@@ -46,8 +46,6 @@ export class CameraAccessory {
   private readonly api: API;
 
   private readonly camera: TAPOCamera;
-  private cameraStatus: Status | undefined;
-  private cameraInfo: DeviceInformation | undefined;
 
   private pullIntervalTick: NodeJS.Timeout | undefined;
 
@@ -112,30 +110,21 @@ export class CameraAccessory {
 
     toggleService
       .getCharacteristic(this.api.hap.Characteristic.On)
-      .onGet(() => {
-        if (!this.cameraStatus) {
-          throw new this.api.hap.HapStatusError(
-            this.api.hap.HAPStatus.RESOURCE_DOES_NOT_EXIST
-          );
+      .onGet(async () => {
+        const cameraStatus = await this.camera.getStatus();
+        const value = cameraStatus[tapoServiceStr];
+        if (value !== undefined) {
+          return value;
         }
-        const value = this.cameraStatus[tapoServiceStr];
-        if (value === undefined) {
-          throw new this.api.hap.HapStatusError(
-            this.api.hap.HAPStatus.RESOURCE_DOES_NOT_EXIST
-          );
-        }
-        return value;
+        throw new this.api.hap.HapStatusError(
+          this.api.hap.HAPStatus.RESOURCE_DOES_NOT_EXIST
+        );
       })
-      .onSet((newValue) => {
+      .onSet(async (newValue) => {
         this.log.info(
           `Setting ${tapoServiceStr} to ${newValue ? "on" : "off"}`
         );
-        this.camera
-          .setStatus(tapoServiceStr, Boolean(newValue))
-          .catch((err) => {
-            this.log.error(`Error at 'setStatus(${tapoServiceStr})'.`, err);
-            this.cameraStatus = undefined; // Home.app shows 'No Response'
-          });
+        this.camera.setStatus(tapoServiceStr, Boolean(newValue));
       });
 
     this.accessory.addService(toggleService);
@@ -205,40 +194,39 @@ export class CameraAccessory {
     }
 
     this.pullIntervalTick = setInterval(() => {
-      this.getStatusAndUpdateHomekitCharacteristics();
+      this.getStatusAndNotify();
     }, this.config.pullInterval || this.platform.kDefaultPullInterval);
   }
 
-  private updateHomekitCharacteristics(status: Status) {
-    this.platform.log.debug("Updating characteristics", status);
-
-    for (const [key, value] of Object.entries(status)) {
-      const toggleService = this.toggleAccessories[key as keyof Status];
-      if (toggleService && value !== undefined) {
-        toggleService
-          .getCharacteristic(this.api.hap.Characteristic.On)
-          .updateValue(value);
-      }
-    }
-  }
-
-  private async getStatusAndUpdateHomekitCharacteristics() {
+  private async getStatusAndNotify() {
     try {
-      this.cameraStatus = await this.camera.getStatus();
-      this.updateHomekitCharacteristics(this.cameraStatus);
+      const cameraStatus = await this.camera.getStatus();
+      this.platform.log.debug("New values", cameraStatus);
+
+      for (const [key, value] of Object.entries(cameraStatus)) {
+        const toggleService = this.toggleAccessories[key as keyof Status];
+        if (toggleService && value !== undefined) {
+          toggleService
+            .getCharacteristic(this.api.hap.Characteristic.On)
+            .updateValue(value);
+        }
+      }
     } catch (err) {
       // When the camera stops responding or a token error occurs.
       this.log.error("Error when retrieving data", err);
-      this.cameraStatus = undefined; // Home.app shows 'No Response'
     }
   }
 
   async setup() {
-    this.cameraInfo = await this.camera.getDeviceInfo();
-    this.setupInfoAccessory(this.cameraInfo);
+    const cameraInfo = await this.camera.getDeviceInfo();
+    this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
+      this.log.info("Identify requested", cameraInfo);
+    });
+
+    this.setupInfoAccessory(cameraInfo);
 
     if (!this.config.disableStreaming) {
-      this.setupCameraStreaming(this.cameraInfo);
+      this.setupCameraStreaming(cameraInfo);
     }
 
     if (!this.config.disableEyesToggleAccessory) {
@@ -281,18 +269,14 @@ export class CameraAccessory {
     }
 
     // Publish as external accessory
-
     this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
-    this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log.info("Identify requested", this.cameraInfo);
-    });
+
+    this.getStatusAndNotify();
 
     // Setup the polling by giving a 3s random delay
     // to avoid all the cameras starting at the same time
     setTimeout(() => {
       this.setupPolling();
     }, this.randomSeed * 3000);
-
-    this.getStatusAndUpdateHomekitCharacteristics();
   }
 }
