@@ -24,7 +24,7 @@ export type CameraConfig = {
   pullInterval?: number;
   disableStreaming?: boolean;
   disableEyesToggleAccessory?: boolean;
-  disableAlarmToogleAccessory?: boolean;
+  disableAlarmToggleAccessory?: boolean;
   disableNotificationsToggleAccessory?: boolean;
   disableMotionDetectionToggleAccessory?: boolean;
   disableLedToggleAccessory?: boolean;
@@ -238,7 +238,7 @@ export class CameraAccessory {
       );
     }
 
-    if (!this.config.disableAlarmToogleAccessory) {
+    if (!this.config.disableAlarmToggleAccessory) {
       this.setupToggleAccessory(
         this.config.alarmToggleAccessoryName || "Alarm",
         "alarm"
