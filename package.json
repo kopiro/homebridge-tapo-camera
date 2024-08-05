@@ -21,7 +21,7 @@
     "url": "https://github.com/kopiro/homebridge-tapo-camera/issues"
   },
   "engines": {
-    "node": "^20.16.0 || ^22.5.1",
+    "node": "^18.13.0 || ^20.16.0 || ^22.5.1",
     "homebridge": "^1.8.0 || ^2.0.0-beta.0"
   },
   "repository": {
