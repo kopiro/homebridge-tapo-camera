@@ -201,29 +201,24 @@ export class CameraAccessory {
   }
 
   private async getStatusAndNotify() {
-    try {
-      const cameraStatus = await this.camera.getStatus();
-      this.platform.log.debug("Notifying new values", cameraStatus);
+    const cameraStatus = await this.camera.getStatus();
+    this.platform.log.debug(
+      "Notifying new values",
+      JSON.stringify(cameraStatus)
+    );
 
-      for (const [key, value] of Object.entries(cameraStatus)) {
-        const toggleService = this.toggleAccessories[key as keyof Status];
-        if (toggleService && value !== undefined) {
-          toggleService
-            .getCharacteristic(this.api.hap.Characteristic.On)
-            .updateValue(value);
-        }
+    for (const [key, value] of Object.entries(cameraStatus)) {
+      const toggleService = this.toggleAccessories[key as keyof Status];
+      if (toggleService && value !== undefined) {
+        toggleService
+          .getCharacteristic(this.api.hap.Characteristic.On)
+          .updateValue(value);
       }
-    } catch (err) {
-      // When the camera stops responding or a token error occurs.
-      this.log.error("Error when retrieving data", err);
     }
   }
 
   async setup() {
     const cameraInfo = await this.camera.getDeviceInfo();
-    this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log.info("Identify requested", cameraInfo);
-    });
 
     this.setupInfoAccessory(cameraInfo);
 
@@ -272,8 +267,13 @@ export class CameraAccessory {
 
     // Publish as external accessory
     this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
+    this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
+      this.log.info("Identify requested", cameraInfo);
+    });
 
-    this.getStatusAndNotify();
+    setImmediate(() => {
+      this.getStatusAndNotify();
+    });
 
     // Setup the polling by giving a 3s random delay
     // to avoid all the cameras starting at the same time

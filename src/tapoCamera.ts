@@ -327,7 +327,7 @@ export class TAPOCamera extends OnvifCamera {
     return this.isSecureConnectionValue;
   }
 
-  getStok(loginRetryCount = 0): Promise<string> {
+  async getStok(loginRetryCount = 0): Promise<string> {
     if (this.stok) {
       return new Promise((resolve) => resolve(this.stok!));
     }
@@ -336,13 +336,12 @@ export class TAPOCamera extends OnvifCamera {
       this.stokPromise = () => this.refreshStok(loginRetryCount);
     }
 
-    return this.stokPromise()
-      .then(() => {
-        return this.stok!;
-      })
-      .finally(() => {
-        this.stokPromise = undefined;
-      });
+    try {
+      await this.stokPromise();
+      return this.stok!;
+    } finally {
+      this.stokPromise = undefined;
+    }
   }
 
   private async getAuthenticatedAPIURL(loginRetryCount = 0) {
@@ -414,12 +413,13 @@ export class TAPOCamera extends OnvifCamera {
     const reqJson = JSON.stringify(req);
 
     if (this.pendingAPIRequests.has(reqJson)) {
+      this.log.debug("API request already pending", reqJson);
       return this.pendingAPIRequests.get(
         reqJson
       ) as Promise<TAPOCameraResponse>;
     }
 
-    this.log.debug("API new request", reqJson);
+    this.log.debug("API request", reqJson);
 
     this.pendingAPIRequests.set(
       reqJson,
@@ -472,9 +472,9 @@ export class TAPOCamera extends OnvifCamera {
           }
 
           this.log.debug(
-            `API response`,
-            response.status,
-            JSON.stringify(responseData)
+            "API response",
+            JSON.stringify(responseData),
+            `status = ${response.status}`
           );
 
           // Apparently the Tapo C200 returns 500 on successful requests,
