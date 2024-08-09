@@ -31,7 +31,7 @@ export class CameraPlatform implements IndependentPlatformPlugin {
       } catch (err) {
         this.log.error(
           `Error during setup of camera ${cameraConfig.name}`,
-          (err as Error)?.message
+          err
         );
       }
     });

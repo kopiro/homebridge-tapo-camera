@@ -27,7 +27,7 @@ export type Status = {
 
 export class TAPOCamera extends OnvifCamera {
   private readonly kStreamPort = 554;
-  private readonly httpsAgent: Agent;
+  private readonly fetchAgent: Agent;
 
   private readonly hashedMD5Password: string;
   private readonly hashedSha256Password: string;
@@ -49,8 +49,10 @@ export class TAPOCamera extends OnvifCamera {
   ) {
     super(log, config);
 
-    this.httpsAgent = new Agent({
+    this.fetchAgent = new Agent({
+      connectTimeout: 5_000,
       connect: {
+        // TAPO devices have self-signed certificates
         rejectUnauthorized: false,
       },
     });
@@ -100,7 +102,7 @@ export class TAPOCamera extends OnvifCamera {
     return fetch(url, {
       headers: this.getHeaders(),
       // @ts-expect-error Dispatcher type not there
-      dispatcher: this.httpsAgent,
+      dispatcher: this.fetchAgent,
       ...data,
     });
   }

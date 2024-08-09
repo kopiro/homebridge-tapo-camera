@@ -111,22 +111,31 @@ export class CameraAccessory {
     toggleService
       .getCharacteristic(this.api.hap.Characteristic.On)
       .onGet(async () => {
-        this.log.debug(`Getting "${tapoServiceStr}" status...`);
+        try {
+          this.log.debug(`Getting "${tapoServiceStr}" status...`);
 
-        const cameraStatus = await this.camera.getStatus();
-        const value = cameraStatus[tapoServiceStr];
-        if (value !== undefined) {
-          return value;
+          const cameraStatus = await this.camera.getStatus();
+          const value = cameraStatus[tapoServiceStr];
+          if (value !== undefined) return value;
+
+          return null;
+        } catch (err) {
+          this.log.error("Error getting status:", err);
+          return null;
         }
-        throw new this.api.hap.HapStatusError(
-          this.api.hap.HAPStatus.RESOURCE_DOES_NOT_EXIST
-        );
       })
       .onSet(async (newValue) => {
-        this.log.info(
-          `Setting "${tapoServiceStr}" to ${newValue ? "on" : "off"}...`
-        );
-        this.camera.setStatus(tapoServiceStr, Boolean(newValue));
+        try {
+          this.log.info(
+            `Setting "${tapoServiceStr}" to ${newValue ? "on" : "off"}...`
+          );
+          this.camera.setStatus(tapoServiceStr, Boolean(newValue));
+        } catch (err) {
+          this.log.error("Error setting status:", err);
+          throw new this.api.hap.HapStatusError(
+            this.api.hap.HAPStatus.RESOURCE_DOES_NOT_EXIST
+          );
+        }
       });
 
     this.accessory.addService(toggleService);
@@ -201,19 +210,20 @@ export class CameraAccessory {
   }
 
   private async getStatusAndNotify() {
-    const cameraStatus = await this.camera.getStatus();
-    this.platform.log.debug(
-      "Notifying new values",
-      JSON.stringify(cameraStatus)
-    );
+    try {
+      const cameraStatus = await this.camera.getStatus();
+      this.log.debug("Notifying new values", JSON.stringify(cameraStatus));
 
-    for (const [key, value] of Object.entries(cameraStatus)) {
-      const toggleService = this.toggleAccessories[key as keyof Status];
-      if (toggleService && value !== undefined) {
-        toggleService
-          .getCharacteristic(this.api.hap.Characteristic.On)
-          .updateValue(value);
+      for (const [key, value] of Object.entries(cameraStatus)) {
+        const toggleService = this.toggleAccessories[key as keyof Status];
+        if (toggleService && value !== undefined) {
+          toggleService
+            .getCharacteristic(this.api.hap.Characteristic.On)
+            .updateValue(value);
+        }
       }
+    } catch (err) {
+      this.log.error("Error getting status:", err);
     }
   }
 
