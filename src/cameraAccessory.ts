@@ -1,7 +1,6 @@
 import {
   API,
   Logging,
-  LogLevel,
   PlatformAccessory,
   PlatformAccessoryEvent,
   Service,
