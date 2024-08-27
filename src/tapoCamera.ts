@@ -15,8 +15,22 @@ import type {
 } from "./types/tapo";
 import { Agent } from "undici";
 
-const MAX_LOGIN_RETRIES = 3;
+const MAX_LOGIN_RETRIES = 2;
 const AES_BLOCK_SIZE = 16;
+const ERROR_CODES_MAP = {
+  "-40401": "Invalid stok value",
+  "-40210": "Function not supported",
+  "-64303": "Action cannot be done while camera is in patrol mode.",
+  "-64324": "Privacy mode is ON, not able to execute",
+  "-64302": "Preset ID not found",
+  "-64321": "Preset ID was deleted so no longer exists",
+  "-40106": "Parameter to get/do does not exist",
+  "-40105": "Method does not exist",
+  "-40101": "Parameter to set does not exist",
+  "-40209": "Invalid login credentials",
+  "-64304": "Maximum Pan/Tilt range reached",
+  "-71103": "User ID is not authorized",
+};
 
 export type Status = {
   eyes: boolean | undefined;
@@ -32,11 +46,11 @@ export class TAPOCamera extends OnvifCamera {
 
   private readonly hashedMD5Password: string;
   private readonly hashedSha256Password: string;
-  private passwordEncryptionMethod: "md5" | "sha256" | null = "md5";
+  private passwordEncryptionMethod: "md5" | "sha256" | null = null;
 
   private isSecureConnectionValue: boolean | null = null;
 
-  private stokPromise: (() => Promise<string>) | undefined;
+  private stokPromise: (() => Promise<void>) | undefined;
 
   private readonly cnonce: string;
   private lsk: Buffer | undefined;
@@ -132,6 +146,8 @@ export class TAPOCamera extends OnvifCamera {
   }
 
   private validateDeviceConfirm(nonce: string, deviceConfirm: string) {
+    this.passwordEncryptionMethod = null;
+
     const hashedNoncesWithSHA256 = crypto
       .createHash("sha256")
       .update(this.cnonce + this.hashedSha256Password + nonce)
@@ -163,18 +179,16 @@ export class TAPOCamera extends OnvifCamera {
       }
     );
 
-    return false;
+    return this.passwordEncryptionMethod !== null;
   }
 
-  async refreshStok(loginRetryCount = 0): Promise<string> {
-    const isSecureConnection = await this.isSecureConnection();
+  async refreshStok(loginRetryCount = 0): Promise<void> {
+    this.log.debug("refreshStok: Refreshing stok...");
 
-    let response = null;
-    let responseData = null;
+    const isSecureConnection = await this.isSecureConnection();
 
     let fetchParams = {};
     if (isSecureConnection) {
-      this.log.debug("refreshStok: Using secure connection");
       fetchParams = {
         method: "post",
         body: JSON.stringify({
@@ -187,7 +201,6 @@ export class TAPOCamera extends OnvifCamera {
         }),
       };
     } else {
-      this.log.debug("refreshStok: Using unsecure connection");
       fetchParams = {
         method: "post",
         body: JSON.stringify({
@@ -201,96 +214,147 @@ export class TAPOCamera extends OnvifCamera {
       };
     }
 
-    response = await this.fetch(
+    const responseLogin = await this.fetch(
       `https://${this.config.ipAddress}`,
       fetchParams
     );
-    responseData = (await response.json()) as TAPOCameraRefreshStokResponse;
+    const responseLoginData =
+      (await responseLogin.json()) as TAPOCameraRefreshStokResponse;
+
+    let response, responseData;
+
+    if (!responseLoginData) {
+      this.log.debug(
+        "refreshStok: empty response login data, raising exception",
+        responseLogin.status
+      );
+      throw new Error("Empty response login data");
+    }
 
     this.log.debug(
       "refreshStok: Login response",
-      response.status,
-      responseData
+      responseLogin.status,
+      responseLoginData
     );
 
-    if (response.status === 401 && responseData.result?.data?.code === 40411) {
-      this.log.debug("refreshStok: Invalid credentials, code 40411");
+    if (
+      responseLogin.status === 401 &&
+      responseLoginData.result?.data?.code === -40411
+    ) {
+      this.log.debug(
+        "refreshStok: invalid credentials, raising exception",
+        responseLogin.status
+      );
       throw new Error("Invalid credentials");
     }
 
-    const nonce = responseData.result?.data?.nonce;
-    const deviceConfirm = responseData.result?.data?.device_confirm;
+    if (isSecureConnection) {
+      const nonce = responseLoginData.result?.data?.nonce;
+      const deviceConfirm = responseLoginData.result?.data?.device_confirm;
+      if (
+        nonce &&
+        deviceConfirm &&
+        this.validateDeviceConfirm(nonce, deviceConfirm)
+      ) {
+        const digestPasswd = crypto
+          .createHash("sha256")
+          .update(this.getHashedPassword() + this.cnonce + nonce)
+          .digest("hex")
+          .toUpperCase();
 
-    if (isSecureConnection && nonce && deviceConfirm) {
-      if (!this.validateDeviceConfirm(nonce, deviceConfirm)) {
-        throw new Error("Invalid device confirm");
-      }
+        const digestPasswdFull = Buffer.concat([
+          Buffer.from(digestPasswd, "utf8"),
+          Buffer.from(this.cnonce!, "utf8"),
+          Buffer.from(nonce, "utf8"),
+        ]).toString("utf8");
 
-      const digestPasswd = crypto
-        .createHash("sha256")
-        .update(this.getHashedPassword() + this.cnonce + nonce)
-        .digest("hex")
-        .toUpperCase();
+        this.log.debug("refreshStok: sending start_seq request");
 
-      const digestPasswdFull = Buffer.concat([
-        Buffer.from(digestPasswd, "utf8"),
-        Buffer.from(this.cnonce!, "utf8"),
-        Buffer.from(nonce, "utf8"),
-      ]).toString("utf8");
+        response = await this.fetch(`https://${this.config.ipAddress}`, {
+          method: "POST",
+          body: JSON.stringify({
+            method: "login",
+            params: {
+              cnonce: this.cnonce,
+              encrypt_type: "3",
+              digest_passwd: digestPasswdFull,
+              username: this.getUsername(),
+            },
+          }),
+        });
 
-      response = await this.fetch(`https://${this.config.ipAddress}`, {
-        method: "POST",
-        body: JSON.stringify({
-          method: "login",
-          params: {
-            cnonce: this.cnonce,
-            encrypt_type: "3",
-            digest_passwd: digestPasswdFull,
-            username: this.getUsername(),
-          },
-        }),
-      });
+        responseData = (await response.json()) as TAPOCameraRefreshStokResponse;
 
-      responseData = (await response.json()) as TAPOCameraRefreshStokResponse;
-
-      this.log.debug(
-        "refreshStok: Start_seq response",
-        response.status,
-        responseData
-      );
-
-      if (responseData?.result?.start_seq) {
-        if (responseData?.result?.user_group !== "root") {
-          this.log.debug("Incorrect user_group detected");
-
-          // # encrypted control via 3rd party account does not seem to be supported
-          // # see https://github.com/JurajNyiri/HomeAssistant-Tapo-Control/issues/456
-          throw new Error("Incorrect user_group detected");
+        if (!responseData) {
+          this.log.debug(
+            "refreshStock: empty response start_seq data, raising exception",
+            response.status
+          );
+          throw new Error("Empty response start_seq data");
         }
 
-        this.lsk = this.generateEncryptionToken("lsk", nonce);
-        this.ivb = this.generateEncryptionToken("ivb", nonce);
-        this.seq = responseData.result.start_seq;
+        this.log.debug(
+          "refreshStok: start_seq response",
+          response.status,
+          JSON.stringify(responseData)
+        );
+
+        if (responseData.result?.start_seq) {
+          if (responseData.result?.user_group !== "root") {
+            this.log.debug("refreshStock: Incorrect user_group detected");
+
+            // # encrypted control via 3rd party account does not seem to be supported
+            // # see https://github.com/JurajNyiri/HomeAssistant-Tapo-Control/issues/456
+            throw new Error("Incorrect user_group detected");
+          }
+
+          this.lsk = this.generateEncryptionToken("lsk", nonce);
+          this.ivb = this.generateEncryptionToken("ivb", nonce);
+          this.seq = responseData.result.start_seq;
+        }
+      } else {
+        if (
+          responseLoginData.error_code === -40413 &&
+          loginRetryCount < MAX_LOGIN_RETRIES
+        ) {
+          this.log.debug(
+            `refreshStock: Invalid device confirm, retrying: ${loginRetryCount}/${MAX_LOGIN_RETRIES}.`,
+            responseLogin.status,
+            responseLoginData
+          );
+          return this.refreshStok(loginRetryCount + 1);
+        }
+
+        this.log.debug(
+          "refreshStock: Invalid device confirm and loginRetryCount exhausted, raising exception",
+          loginRetryCount,
+          responseLoginData
+        );
+        throw new Error("Invalid device confirm");
       }
+    } else {
+      this.passwordEncryptionMethod = "md5";
+      response = responseLogin;
+      responseData = responseLoginData;
     }
 
     if (
-      responseData?.result?.data?.sec_left &&
+      responseData.result?.data?.sec_left &&
       responseData.result.data.sec_left > 0
     ) {
-      this.log.debug("refreshStok: Temporary Suspension", responseData);
+      this.log.debug("refreshStok: temporary suspension", responseData);
 
       throw new Error(
-        `refreshStok: Temporary Suspension: Try again in ${responseData.result.data.sec_left} seconds`
+        `Temporary Suspension: Try again in ${responseData.result.data.sec_left} seconds`
       );
     }
 
     if (
-      responseData?.data?.code == -40404 &&
+      responseData?.data?.code === -40404 &&
       responseData?.data?.sec_left &&
       responseData.data.sec_left > 0
     ) {
-      this.log.debug("refreshStok: Temporary Suspension (40404)", responseData);
+      this.log.debug("refreshStok: temporary suspension", responseData);
 
       throw new Error(
         `refreshStok: Temporary Suspension: Try again in ${responseData.data.sec_left} seconds`
@@ -299,8 +363,8 @@ export class TAPOCamera extends OnvifCamera {
 
     if (responseData?.result?.stok) {
       this.stok = responseData.result.stok;
-      this.log.debug("refreshStok: Success :>>", this.stok);
-      return this.stok!;
+      this.log.debug("refreshStok: Success in obtaining STOK", this.stok);
+      return;
     }
 
     if (
@@ -308,18 +372,21 @@ export class TAPOCamera extends OnvifCamera {
       loginRetryCount < MAX_LOGIN_RETRIES
     ) {
       this.log.debug(
-        `Unexpected response, retrying: ${loginRetryCount}/${MAX_LOGIN_RETRIES}.`,
+        `refreshStock: Unexpected response, retrying: ${loginRetryCount}/${MAX_LOGIN_RETRIES}.`,
         response.status,
         responseData
       );
       return this.refreshStok(loginRetryCount + 1);
     }
 
+    this.log.debug("refreshStock: Unexpected end of flow, raising exception");
     throw new Error("Invalid authentication data");
   }
 
   async isSecureConnection() {
     if (this.isSecureConnectionValue === null) {
+      this.log.debug("isSecureConnection: Checking secure connection...");
+
       const response = await this.fetch(`https://${this.config.ipAddress}`, {
         method: "post",
         body: JSON.stringify({
@@ -333,34 +400,40 @@ export class TAPOCamera extends OnvifCamera {
       const responseData = (await response.json()) as TAPOCameraLoginResponse;
 
       this.log.debug(
-        "isSecureConnection response :>> ",
+        "isSecureConnection response",
         response.status,
-        responseData
+        JSON.stringify(responseData)
       );
 
       this.isSecureConnectionValue =
         responseData?.error_code == -40413 &&
-        (responseData.result?.data?.encrypt_type || "")?.includes("3");
+        String(responseData.result?.data?.encrypt_type || "")?.includes("3");
     }
 
     return this.isSecureConnectionValue;
   }
 
-  async getStok(loginRetryCount = 0): Promise<string> {
-    if (this.stok) {
-      return new Promise((resolve) => resolve(this.stok!));
-    }
+  getStok(loginRetryCount = 0): Promise<string> {
+    return new Promise((resolve) => {
+      if (this.stok) {
+        return resolve(this.stok);
+      }
 
-    if (!this.stokPromise) {
-      this.stokPromise = () => this.refreshStok(loginRetryCount);
-    }
+      if (!this.stokPromise) {
+        this.stokPromise = () => this.refreshStok(loginRetryCount);
+      }
 
-    try {
-      await this.stokPromise();
-      return this.stok!;
-    } finally {
-      this.stokPromise = undefined;
-    }
+      this.stokPromise()
+        .then(() => {
+          if (!this.stok) {
+            throw new Error("STOK not found");
+          }
+          resolve(this.stok!);
+        })
+        .finally(() => {
+          this.stokPromise = undefined;
+        });
+    });
   }
 
   private async getAuthenticatedAPIURL(loginRetryCount = 0) {
@@ -436,9 +509,9 @@ export class TAPOCamera extends OnvifCamera {
       return this.pendingAPIRequests.get(
         reqJson
       ) as Promise<TAPOCameraResponse>;
+    } else {
+      this.log.debug("New API request", reqJson);
     }
-
-    this.log.debug("API request", reqJson);
 
     this.pendingAPIRequests.set(
       reqJson,
@@ -473,12 +546,22 @@ export class TAPOCamera extends OnvifCamera {
 
           const response = await this.fetch(url, fetchParams);
           const responseDataTmp = await response.json();
+
+          // Apparently the Tapo C200 returns 500 on successful requests,
+          // but it's indicating an expiring token, therefore refresh the token next time
+          if (isSecureConnection && response.status === 500) {
+            this.log.debug(
+              "Stok expired, reauthenticating on next request, setting STOK to undefined"
+            );
+            this.stok = undefined;
+          }
+
           let responseData: TAPOCameraResponse | null = null;
 
           if (isSecureConnection) {
             const encryptedResponse =
               responseDataTmp as TAPOCameraEncryptedResponse;
-            if (encryptedResponse.result?.response) {
+            if (encryptedResponse?.result?.response) {
               const decryptedResponse = this.decryptResponse(
                 encryptedResponse.result.response
               );
@@ -496,24 +579,32 @@ export class TAPOCamera extends OnvifCamera {
             JSON.stringify(responseData)
           );
 
-          // Apparently the Tapo C200 returns 500 on successful requests,
-          // but it's indicating an expiring token, therefore refresh the token next time
-          if (isSecureConnection && response.status === 500) {
-            this.log.debug("Stok expired, reauthenticating");
-            this.stok = undefined;
+          // Log error codes
+          if (responseData && responseData.error_code !== 0) {
+            const errorCode = String(responseData.error_code);
+            const errorMessage =
+              errorCode in ERROR_CODES_MAP
+                ? ERROR_CODES_MAP[errorCode as keyof typeof ERROR_CODES_MAP]
+                : "Unknown error";
+            this.log.debug(
+              `API request failed with specific error code ${errorCode}: ${errorMessage}`
+            );
           }
 
-          // Check if we have to refresh the token
           if (
             !responseData ||
             responseData.error_code === -40401 ||
             responseData.error_code === -1
           ) {
-            this.log.debug("API request failed, trying reauth");
+            this.log.debug(
+              "API request failed, reauth now and trying same request again",
+              responseData
+            );
             this.stok = undefined;
             return this.apiRequest(req, loginRetryCount + 1);
           }
 
+          // Success
           return responseData;
         } finally {
           this.pendingAPIRequests.delete(reqJson);

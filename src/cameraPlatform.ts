@@ -27,10 +27,11 @@ export class CameraPlatform implements IndependentPlatformPlugin {
         const cameraAccessory = new CameraAccessory(this, cameraConfig);
         await cameraAccessory.setup();
       } catch (err) {
-        this.log.error("Error during setup of camera", cameraConfig, err);
-        if (err instanceof Error) {
-          this.log.error("Stack trace:", err.stack);
-        }
+        this.log.error(
+          `Error during setup of camera "${cameraConfig.name}"`,
+          err,
+          err instanceof Error ? err.stack : []
+        );
       }
     });
   }
