@@ -254,69 +254,72 @@ export class CameraAccessory {
   }
 
   async setup() {
-    const cameraInfo = await this.camera.getDeviceInfo();
-    this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log.info("Identify requested", cameraInfo);
-    });
+    const basicInfo = await this.camera.getBasicInfo();
+    this.log.debug("Basic info", basicInfo);
 
-    this.log.debug("Camera info", cameraInfo);
+    // const cameraInfo = await this.camera.getDeviceInfo();
+    // this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
+    //   this.log.info("Identify requested", cameraInfo);
+    // });
 
-    this.setupInfoAccessory(cameraInfo);
+    // this.log.debug("Camera info", cameraInfo);
 
-    if (!this.config.disableStreaming) {
-      this.setupCameraStreaming(cameraInfo);
-    }
+    // this.setupInfoAccessory(cameraInfo);
 
-    if (!this.config.disableEyesToggleAccessory) {
-      this.setupToggleAccessory(
-        this.config.eyesToggleAccessoryName || "Eyes",
-        "eyes"
-      );
-    }
+    // if (!this.config.disableStreaming) {
+    //   this.setupCameraStreaming(cameraInfo);
+    // }
 
-    if (!this.config.disableAlarmToggleAccessory) {
-      this.setupToggleAccessory(
-        this.config.alarmToggleAccessoryName || "Alarm",
-        "alarm"
-      );
-    }
+    // if (!this.config.disableEyesToggleAccessory) {
+    //   this.setupToggleAccessory(
+    //     this.config.eyesToggleAccessoryName || "Eyes",
+    //     "eyes"
+    //   );
+    // }
 
-    if (!this.config.disableNotificationsToggleAccessory) {
-      this.setupToggleAccessory(
-        this.config.notificationsToggleAccessoryName || "Notifications",
-        "notifications"
-      );
-    }
+    // if (!this.config.disableAlarmToggleAccessory) {
+    //   this.setupToggleAccessory(
+    //     this.config.alarmToggleAccessoryName || "Alarm",
+    //     "alarm"
+    //   );
+    // }
 
-    if (!this.config.disableMotionDetectionToggleAccessory) {
-      this.setupToggleAccessory(
-        this.config.motionDetectionToggleAccessoryName || "Motion Detection",
-        "motionDetection"
-      );
-    }
+    // if (!this.config.disableNotificationsToggleAccessory) {
+    //   this.setupToggleAccessory(
+    //     this.config.notificationsToggleAccessoryName || "Notifications",
+    //     "notifications"
+    //   );
+    // }
 
-    if (!this.config.disableLEDToggleAccessory) {
-      this.setupToggleAccessory(
-        this.config.ledToggleAccessoryName || "LED",
-        "led"
-      );
-    }
+    // if (!this.config.disableMotionDetectionToggleAccessory) {
+    //   this.setupToggleAccessory(
+    //     this.config.motionDetectionToggleAccessoryName || "Motion Detection",
+    //     "motionDetection"
+    //   );
+    // }
 
-    if (!this.config.disableMotionSensorAccessory) {
-      this.setupMotionSensorAccessory();
-    }
+    // if (!this.config.disableLEDToggleAccessory) {
+    //   this.setupToggleAccessory(
+    //     this.config.ledToggleAccessoryName || "LED",
+    //     "led"
+    //   );
+    // }
 
-    // Publish as external accessory
-    this.log.debug("Publishing accessory...");
-    this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
+    // if (!this.config.disableMotionSensorAccessory) {
+    //   this.setupMotionSensorAccessory();
+    // }
 
-    this.log.debug("Notifying initial values...");
-    await this.getStatusAndNotify();
+    // // Publish as external accessory
+    // this.log.debug("Publishing accessory...");
+    // this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
 
-    // Setup the polling by giving a 3s random delay
-    // to avoid all the cameras starting at the same time
-    setTimeout(() => {
-      this.setupPolling();
-    }, this.randomSeed * 5000);
+    // this.log.debug("Notifying initial values...");
+    // await this.getStatusAndNotify();
+
+    // // Setup the polling by giving a 3s random delay
+    // // to avoid all the cameras starting at the same time
+    // setTimeout(() => {
+    //   this.setupPolling();
+    // }, this.randomSeed * 5000);
   }
 }

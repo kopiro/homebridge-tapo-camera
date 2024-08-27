@@ -213,7 +213,7 @@ export class TAPOCamera extends OnvifCamera {
     );
 
     if (response.status === 401 && responseData.result?.data?.code === 40411) {
-      this.log.debug("StokRefresh: Invalid credentials, code 40411");
+      this.log.debug("refreshStok: Invalid credentials, code 40411");
       throw new Error("Invalid credentials");
     }
 
@@ -277,10 +277,10 @@ export class TAPOCamera extends OnvifCamera {
       responseData?.result?.data?.sec_left &&
       responseData.result.data.sec_left > 0
     ) {
-      this.log.debug("StokRefresh: Temporary Suspension", responseData);
+      this.log.debug("refreshStok: Temporary Suspension", responseData);
 
       throw new Error(
-        `StokRefresh: Temporary Suspension: Try again in ${responseData.result.data.sec_left} seconds`
+        `refreshStok: Temporary Suspension: Try again in ${responseData.result.data.sec_left} seconds`
       );
     }
 
@@ -289,16 +289,16 @@ export class TAPOCamera extends OnvifCamera {
       responseData?.data?.sec_left &&
       responseData.data.sec_left > 0
     ) {
-      this.log.debug("StokRefresh: Temporary Suspension (40404)", responseData);
+      this.log.debug("refreshStok: Temporary Suspension (40404)", responseData);
 
       throw new Error(
-        `StokRefresh: Temporary Suspension: Try again in ${responseData.data.sec_left} seconds`
+        `refreshStok: Temporary Suspension: Try again in ${responseData.data.sec_left} seconds`
       );
     }
 
     if (responseData?.result?.stok) {
       this.stok = responseData.result.stok;
-      this.log.debug("StokRefresh: Success :>>", this.stok);
+      this.log.debug("refreshStok: Success :>>", this.stok);
       return this.stok!;
     }
 
