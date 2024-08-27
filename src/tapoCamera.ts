@@ -3,6 +3,7 @@ import { CameraConfig } from "./cameraAccessory";
 import crypto from "crypto";
 import { OnvifCamera } from "./onvifCamera";
 import type {
+  TAPOBasicInfo,
   TAPOCameraEncryptedRequest,
   TAPOCameraEncryptedResponse,
   TAPOCameraLoginResponse,
@@ -604,7 +605,7 @@ export class TAPOCamera extends OnvifCamera {
     return operation.result;
   }
 
-  async getBasicInfo() {
+  async getBasicInfo(): Promise<TAPOBasicInfo> {
     const responseData = await this.apiRequest({
       method: "multipleRequest",
       params: {

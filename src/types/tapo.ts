@@ -210,25 +210,27 @@ export type TAPOCameraResponseGet =
   | TAPOCameraResponseGetMotionDetection
   | TAPOCameraResponseGetLed;
 
+export type TAPOBasicInfo = {
+  device_type: string;
+  device_model: string;
+  device_name: string;
+  device_info: string;
+  hw_version: string;
+  sw_version: string;
+  device_alias: string;
+  features: string;
+  barcode: string;
+  mac: string;
+  dev_id: string;
+  oem_id: string;
+  hw_desc: string;
+};
+
 export type TAPOCameraResponseDeviceInfo = {
   method: "getDeviceInfo";
   result: {
     device_info: {
-      basic_info: {
-        device_type: string;
-        device_model: string;
-        device_name: string;
-        device_info: string;
-        hw_version: string;
-        sw_version: string;
-        device_alias: string;
-        features: string;
-        barcode: string;
-        mac: string;
-        dev_id: string;
-        oem_id: string;
-        hw_desc: string;
-      };
+      basic_info: TAPOBasicInfo;
     };
   };
   error_code: number;

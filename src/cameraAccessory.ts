@@ -12,6 +12,7 @@ import { PLUGIN_ID } from "./pkg";
 import { DeviceInformation } from "./types/onvif";
 import { CameraPlatform } from "./cameraPlatform";
 import { VideoConfig } from "homebridge-camera-ffmpeg/dist/configTypes";
+import { TAPOBasicInfo } from "./types/tapo";
 
 export type CameraConfig = {
   name: string;
@@ -74,7 +75,7 @@ export class CameraAccessory {
     this.camera = new TAPOCamera(this.log, this.config);
   }
 
-  private setupInfoAccessory(deviceInfo: DeviceInformation) {
+  private setupInfoAccessory(basicInfo: TAPOBasicInfo) {
     this.infoAccessory = this.accessory.getService(
       this.api.hap.Service.AccessoryInformation
     );
@@ -83,18 +84,18 @@ export class CameraAccessory {
       this.accessory.addService(this.infoAccessory);
     }
     this.infoAccessory
+      .setCharacteristic(this.api.hap.Characteristic.Manufacturer, "TAPO")
       .setCharacteristic(
-        this.api.hap.Characteristic.Manufacturer,
-        deviceInfo.manufacturer
+        this.api.hap.Characteristic.Model,
+        basicInfo.device_info
       )
-      .setCharacteristic(this.api.hap.Characteristic.Model, deviceInfo.model)
       .setCharacteristic(
         this.api.hap.Characteristic.SerialNumber,
-        deviceInfo.serialNumber
+        basicInfo.mac
       )
       .setCharacteristic(
         this.api.hap.Characteristic.FirmwareRevision,
-        deviceInfo.firmwareVersion
+        basicInfo.sw_version
       );
   }
 
@@ -179,16 +180,16 @@ export class CameraAccessory {
     return config;
   }
 
-  private async setupCameraStreaming(deviceInfo: DeviceInformation) {
+  private async setupCameraStreaming(basicInfo: TAPOBasicInfo) {
     try {
       const delegate = new StreamingDelegate(
         new Logger(this.log),
         {
           name: this.config.name,
-          manufacturer: deviceInfo.manufacturer,
-          model: deviceInfo.model,
-          serialNumber: deviceInfo.serialNumber,
-          firmwareRevision: deviceInfo.firmwareVersion,
+          manufacturer: "TAPO",
+          model: basicInfo.device_info,
+          serialNumber: basicInfo.mac,
+          firmwareRevision: basicInfo.sw_version,
           unbridge: true,
           videoConfig: this.getVideoConfig(),
         },
@@ -238,7 +239,7 @@ export class CameraAccessory {
   private async getStatusAndNotify() {
     try {
       const cameraStatus = await this.camera.getStatus();
-      this.log.debug("Notifying new values", JSON.stringify(cameraStatus));
+      this.log.debug("Notifying new values...", cameraStatus);
 
       for (const [key, value] of Object.entries(cameraStatus)) {
         const toggleService = this.toggleAccessories[key as keyof Status];
@@ -257,69 +258,66 @@ export class CameraAccessory {
     const basicInfo = await this.camera.getBasicInfo();
     this.log.debug("Basic info", basicInfo);
 
-    const cameraInfo = await this.camera.getDeviceInfo();
-    this.log.debug("Camera info", cameraInfo);
-
     this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log.info("Identify requested", cameraInfo, basicInfo);
+      this.log.info("Identify requested", basicInfo);
     });
 
-    this.setupInfoAccessory(cameraInfo);
+    this.setupInfoAccessory(basicInfo);
 
-    // if (!this.config.disableStreaming) {
-    //   this.setupCameraStreaming(cameraInfo);
-    // }
+    if (!this.config.disableStreaming) {
+      this.setupCameraStreaming(basicInfo);
+    }
 
-    // if (!this.config.disableEyesToggleAccessory) {
-    //   this.setupToggleAccessory(
-    //     this.config.eyesToggleAccessoryName || "Eyes",
-    //     "eyes"
-    //   );
-    // }
+    if (!this.config.disableEyesToggleAccessory) {
+      this.setupToggleAccessory(
+        this.config.eyesToggleAccessoryName || "Eyes",
+        "eyes"
+      );
+    }
 
-    // if (!this.config.disableAlarmToggleAccessory) {
-    //   this.setupToggleAccessory(
-    //     this.config.alarmToggleAccessoryName || "Alarm",
-    //     "alarm"
-    //   );
-    // }
+    if (!this.config.disableAlarmToggleAccessory) {
+      this.setupToggleAccessory(
+        this.config.alarmToggleAccessoryName || "Alarm",
+        "alarm"
+      );
+    }
 
-    // if (!this.config.disableNotificationsToggleAccessory) {
-    //   this.setupToggleAccessory(
-    //     this.config.notificationsToggleAccessoryName || "Notifications",
-    //     "notifications"
-    //   );
-    // }
+    if (!this.config.disableNotificationsToggleAccessory) {
+      this.setupToggleAccessory(
+        this.config.notificationsToggleAccessoryName || "Notifications",
+        "notifications"
+      );
+    }
 
-    // if (!this.config.disableMotionDetectionToggleAccessory) {
-    //   this.setupToggleAccessory(
-    //     this.config.motionDetectionToggleAccessoryName || "Motion Detection",
-    //     "motionDetection"
-    //   );
-    // }
+    if (!this.config.disableMotionDetectionToggleAccessory) {
+      this.setupToggleAccessory(
+        this.config.motionDetectionToggleAccessoryName || "Motion Detection",
+        "motionDetection"
+      );
+    }
 
-    // if (!this.config.disableLEDToggleAccessory) {
-    //   this.setupToggleAccessory(
-    //     this.config.ledToggleAccessoryName || "LED",
-    //     "led"
-    //   );
-    // }
+    if (!this.config.disableLEDToggleAccessory) {
+      this.setupToggleAccessory(
+        this.config.ledToggleAccessoryName || "LED",
+        "led"
+      );
+    }
 
-    // if (!this.config.disableMotionSensorAccessory) {
-    //   this.setupMotionSensorAccessory();
-    // }
+    if (!this.config.disableMotionSensorAccessory) {
+      this.setupMotionSensorAccessory();
+    }
 
     // // Publish as external accessory
     this.log.debug("Publishing accessory...");
     this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
 
-    // this.log.debug("Notifying initial values...");
-    // await this.getStatusAndNotify();
-
     // // Setup the polling by giving a 3s random delay
     // // to avoid all the cameras starting at the same time
-    // setTimeout(() => {
-    //   this.setupPolling();
-    // }, this.randomSeed * 5000);
+    setTimeout(() => {
+      this.setupPolling();
+    }, this.randomSeed * 5000);
+
+    this.log.debug("Notifying initial values...");
+    await this.getStatusAndNotify();
   }
 }
