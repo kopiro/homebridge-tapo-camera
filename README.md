@@ -28,13 +28,16 @@ An example Home automation could be:
 	- If you care about your privacy, disable *Eyes* to switch on privacy mode
 	- If you want the camera always on, but no notifications, just disable *Alarm* and *Notifications*
 
-### Motion detection
+### Motion sensor
 
-The motion detection is built on top of the ONVIF protocol and it is enabled by default.
+The motion detection sensor is built on top of the ONVIF protocol and it is enabled by default.
 
 Therefore you can set up automations and Homekit can send you notification in the Home app when motion is detected.
 
 Make sure you activate "Activity Notifications" in the "Status and Notifications" tab in the accessory.
+
+> [!NOTE]  
+> Some people may have issues resulting the plugin crashing at startup when this option is enabled. If you see an error like `Error: read ECONNRESET at TCP.onStreamRead` try to disable the motion sensor by setting `disableMotionSensorAccessory` to `true`
 
 ## Installation
 
@@ -52,7 +55,8 @@ It is highly recommended that you use either Homebridge Config UI X or the HOOBS
 
 The plugin should take care of installing the `ffmpeg` automatically.
 
-If you're getting errors like `FFmpeg exited with code: 1 and signal: null (Error)`, please follow the instructions here on how to install [ffmpeg-for-homebridge](https://github.com/homebridge/ffmpeg-for-homebridge) binaries manually.
+> [!IMPORTANT]  
+> If you're getting errors like `FFmpeg exited with code: 1 and signal: null (Error)`, please follow the instructions here on how to install [ffmpeg-for-homebridge](https://github.com/homebridge/ffmpeg-for-homebridge) binaries manually.
 
 ### Adding the unbridged accessory to Home
 
