@@ -9,7 +9,6 @@ import { StreamingDelegate } from "homebridge-camera-ffmpeg/dist/streamingDelega
 import { Logger } from "homebridge-camera-ffmpeg/dist/logger";
 import { Status, TAPOCamera } from "./tapoCamera";
 import { PLUGIN_ID } from "./pkg";
-import { DeviceInformation } from "./types/onvif";
 import { CameraPlatform } from "./cameraPlatform";
 import { VideoConfig } from "homebridge-camera-ffmpeg/dist/configTypes";
 import { TAPOBasicInfo } from "./types/tapo";
