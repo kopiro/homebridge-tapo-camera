@@ -8,6 +8,9 @@ Make your TP-Link TAPO security camera compatible with Homekit through Homebridg
 
 The plugin exposes the camera RTSP video feed, and toggle accessories to configure your automations.
 
+> [!IMPORTANT]
+> On firmware build 230921 and higher, [please follow this guide](https://github.com/JurajNyiri/HomeAssistant-Tapo-Control/blob/main/add_camera_with_new_firmware.md) to make your camera compatible with this integration.
+
 ### Toggle accessories
 
 - _"Eyes"_ controls the privacy mode; when it's on it means that the camera is able to see
@@ -58,6 +61,3 @@ The plugin should take care of installing the `ffmpeg` automatically.
 > [!IMPORTANT]  
 > If you're getting errors like `FFmpeg exited with code: 1 and signal: null (Error)`, please follow the instructions here on how to install [ffmpeg-for-homebridge](https://github.com/homebridge/ffmpeg-for-homebridge) binaries manually.
 
-### Adding the unbridged accessory to Home
-
-Once done you will have unbridged accessories, therefore you need to manually add them in your Home app.
