@@ -1,6 +1,7 @@
 import {
   API,
   Logging,
+  LogLevel,
   PlatformAccessory,
   PlatformAccessoryEvent,
   Service,
@@ -62,8 +63,11 @@ export class CameraAccessory {
     private readonly platform: CameraPlatform,
     private readonly config: CameraConfig
   ) {
-    this.log = this.platform.log;
-    this.log.prefix = this.config.name;
+    // @ts-expect-error - private property
+    this.log = {
+      ...this.platform.log,
+      prefix: this.platform.log.prefix + `/${this.config.name}`,
+    };
 
     this.api = this.platform.api;
     this.accessory = new this.api.platformAccessory(
@@ -234,6 +238,7 @@ export class CameraAccessory {
     }
 
     this.pullIntervalTick = setInterval(() => {
+      this.log.debug("Polling status...");
       this.getStatusAndNotify();
     }, this.config.pullInterval || this.platform.kDefaultPullInterval);
   }
