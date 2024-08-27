@@ -135,21 +135,31 @@ export class TAPOCamera extends OnvifCamera {
       .update(this.cnonce + this.hashedSha256Password + nonce)
       .digest("hex")
       .toUpperCase();
-    const hashedNoncesWithMD5 = crypto
-      .createHash("md5")
-      .update(this.cnonce + this.hashedMD5Password + nonce)
-      .digest("hex")
-      .toUpperCase();
-
     if (deviceConfirm === hashedNoncesWithSHA256 + nonce + this.cnonce) {
       this.passwordEncryptionMethod = "sha256";
       return true;
     }
 
+    const hashedNoncesWithMD5 = crypto
+      .createHash("md5")
+      .update(this.cnonce + this.hashedMD5Password + nonce)
+      .digest("hex")
+      .toUpperCase();
     if (deviceConfirm === hashedNoncesWithMD5 + nonce + this.cnonce) {
       this.passwordEncryptionMethod = "md5";
       return true;
     }
+
+    this.log.debug(
+      'Invalid device confirm, expected "sha256" or "md5" to match, but none found',
+      {
+        hashedNoncesWithMD5,
+        hashedNoncesWithSHA256,
+        deviceConfirm,
+        nonce,
+        cnonce: this,
+      }
+    );
 
     return false;
   }
@@ -162,7 +172,7 @@ export class TAPOCamera extends OnvifCamera {
 
     let fetchParams = {};
     if (isSecureConnection) {
-      this.log.debug("StokRefresh: Using secure connection");
+      this.log.debug("refreshStok: Using secure connection");
       fetchParams = {
         method: "post",
         body: JSON.stringify({
@@ -175,7 +185,7 @@ export class TAPOCamera extends OnvifCamera {
         }),
       };
     } else {
-      this.log.debug("StokRefresh: Using unsecure connection");
+      this.log.debug("refreshStok: Using unsecure connection");
       fetchParams = {
         method: "post",
         body: JSON.stringify({
@@ -196,15 +206,14 @@ export class TAPOCamera extends OnvifCamera {
     responseData = (await response.json()) as TAPOCameraRefreshStokResponse;
 
     this.log.debug(
-      "StokRefresh: Login response :>> ",
+      "refreshStok: Login response",
       response.status,
-      JSON.stringify(responseData)
+      responseData
     );
 
-    if (response.status === 401) {
-      if (responseData.result?.data?.code === 40411) {
-        throw new Error("Invalid credentials");
-      }
+    if (response.status === 401 && responseData.result?.data?.code === 40411) {
+      this.log.debug("StokRefresh: Invalid credentials, code 40411");
+      throw new Error("Invalid credentials");
     }
 
     const nonce = responseData.result?.data?.nonce;
@@ -243,13 +252,15 @@ export class TAPOCamera extends OnvifCamera {
       responseData = (await response.json()) as TAPOCameraRefreshStokResponse;
 
       this.log.debug(
-        "StokRefresh: Start_seq response :>>",
+        "refreshStok: Start_seq response",
         response.status,
-        JSON.stringify(responseData)
+        responseData
       );
 
       if (responseData?.result?.start_seq) {
         if (responseData?.result?.user_group !== "root") {
+          this.log.debug("Incorrect user_group detected");
+
           // # encrypted control via 3rd party account does not seem to be supported
           // # see https://github.com/JurajNyiri/HomeAssistant-Tapo-Control/issues/456
           throw new Error("Incorrect user_group detected");
@@ -265,6 +276,8 @@ export class TAPOCamera extends OnvifCamera {
       responseData?.result?.data?.sec_left &&
       responseData.result.data.sec_left > 0
     ) {
+      this.log.debug("StokRefresh: Temporary Suspension", responseData);
+
       throw new Error(
         `StokRefresh: Temporary Suspension: Try again in ${responseData.result.data.sec_left} seconds`
       );
@@ -275,6 +288,8 @@ export class TAPOCamera extends OnvifCamera {
       responseData?.data?.sec_left &&
       responseData.data.sec_left > 0
     ) {
+      this.log.debug("StokRefresh: Temporary Suspension (40404)", responseData);
+
       throw new Error(
         `StokRefresh: Temporary Suspension: Try again in ${responseData.data.sec_left} seconds`
       );
@@ -293,7 +308,7 @@ export class TAPOCamera extends OnvifCamera {
       this.log.debug(
         `Unexpected response, retrying: ${loginRetryCount}/${MAX_LOGIN_RETRIES}.`,
         response.status,
-        JSON.stringify(responseData)
+        responseData
       );
       return this.refreshStok(loginRetryCount + 1);
     }
@@ -473,11 +488,7 @@ export class TAPOCamera extends OnvifCamera {
             responseData = responseDataTmp as TAPOCameraResponse;
           }
 
-          this.log.debug(
-            "API response",
-            JSON.stringify(responseData),
-            `status = ${response.status}`
-          );
+          this.log.debug("API response", response.status, responseData);
 
           // Apparently the Tapo C200 returns 500 on successful requests,
           // but it's indicating an expiring token, therefore refresh the token next time
@@ -492,7 +503,11 @@ export class TAPOCamera extends OnvifCamera {
             responseData.error_code === -40401 ||
             responseData.error_code === -1
           ) {
-            this.log.debug("API request failed, trying reauth");
+            this.log.debug(
+              "API request failed, trying reauth",
+              response.status,
+              responseData
+            );
             this.stok = undefined;
             return this.apiRequest(req, loginRetryCount + 1);
           }
@@ -671,11 +686,11 @@ export class TAPOCamera extends OnvifCamera {
     );
     const led = operations.find((r) => r.method === "getLedStatus");
 
-    if (!alert) this.log.warn("No alert config found");
-    if (!lensMask) this.log.warn("No lens mask config found");
-    if (!notifications) this.log.warn("No notifications config found");
-    if (!motionDetection) this.log.warn("No motion detection config found");
-    if (!led) this.log.warn("No led config found");
+    if (!alert) this.log.debug("No alert config found");
+    if (!lensMask) this.log.debug("No lens mask config found");
+    if (!notifications) this.log.debug("No notifications config found");
+    if (!motionDetection) this.log.debug("No motion detection config found");
+    if (!led) this.log.debug("No led config found");
 
     return {
       alarm: alert

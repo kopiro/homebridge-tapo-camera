@@ -116,8 +116,14 @@ export class CameraAccessory {
 
           const cameraStatus = await this.camera.getStatus();
           const value = cameraStatus[tapoServiceStr];
-          if (value !== undefined) return value;
+          if (value !== undefined) {
+            return value;
+          }
 
+          this.log.debug(
+            `Status "${tapoServiceStr}" not found in status`,
+            cameraStatus
+          );
           return null;
         } catch (err) {
           this.log.error("Error getting status:", err);
@@ -126,7 +132,7 @@ export class CameraAccessory {
       })
       .onSet(async (newValue) => {
         try {
-          this.log.info(
+          this.log.debug(
             `Setting "${tapoServiceStr}" to ${newValue ? "on" : "off"}...`
           );
           this.camera.setStatus(tapoServiceStr, Boolean(newValue));

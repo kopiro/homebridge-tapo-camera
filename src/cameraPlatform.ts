@@ -2,11 +2,9 @@ import {
   API,
   IndependentPlatformPlugin,
   Logging,
-  PlatformAccessory,
   PlatformConfig,
 } from "homebridge";
 import { CameraAccessory, CameraConfig } from "./cameraAccessory";
-import { PLUGIN_ID, PLATFORM_NAME } from "./pkg";
 
 export interface CameraPlatformConfig extends PlatformConfig {
   cameras?: CameraConfig[];
@@ -26,20 +24,11 @@ export class CameraPlatform implements IndependentPlatformPlugin {
   private discoverDevices() {
     this.config.cameras?.forEach(async (cameraConfig) => {
       try {
-        const accessory = new CameraAccessory(this, cameraConfig);
-        await accessory.setup();
+        const cameraAccessory = new CameraAccessory(this, cameraConfig);
+        await cameraAccessory.setup();
       } catch (err) {
-        this.log.error(
-          `Error during setup of camera ${cameraConfig.name}`,
-          err
-        );
+        this.log.error("Error during setup of camera", cameraConfig, err);
       }
     });
-  }
-
-  private removeAccessory(platformAccessory: PlatformAccessory) {
-    this.api.unregisterPlatformAccessories(PLUGIN_ID, PLATFORM_NAME, [
-      platformAccessory,
-    ]);
   }
 }
