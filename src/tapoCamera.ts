@@ -3,6 +3,7 @@ import { CameraConfig } from "./cameraAccessory";
 import crypto from "crypto";
 import { OnvifCamera } from "./onvifCamera";
 import type {
+  TAPOBasicInfo,
   TAPOCameraEncryptedRequest,
   TAPOCameraEncryptedResponse,
   TAPOCameraLoginResponse,
@@ -54,6 +55,7 @@ export class TAPOCamera extends OnvifCamera {
       connect: {
         // TAPO devices have self-signed certificates
         rejectUnauthorized: false,
+        ciphers: "AES256-SHA:AES128-GCM-SHA256",
       },
     });
 
@@ -212,7 +214,7 @@ export class TAPOCamera extends OnvifCamera {
     );
 
     if (response.status === 401 && responseData.result?.data?.code === 40411) {
-      this.log.debug("StokRefresh: Invalid credentials, code 40411");
+      this.log.debug("refreshStok: Invalid credentials, code 40411");
       throw new Error("Invalid credentials");
     }
 
@@ -276,10 +278,10 @@ export class TAPOCamera extends OnvifCamera {
       responseData?.result?.data?.sec_left &&
       responseData.result.data.sec_left > 0
     ) {
-      this.log.debug("StokRefresh: Temporary Suspension", responseData);
+      this.log.debug("refreshStok: Temporary Suspension", responseData);
 
       throw new Error(
-        `StokRefresh: Temporary Suspension: Try again in ${responseData.result.data.sec_left} seconds`
+        `refreshStok: Temporary Suspension: Try again in ${responseData.result.data.sec_left} seconds`
       );
     }
 
@@ -288,16 +290,16 @@ export class TAPOCamera extends OnvifCamera {
       responseData?.data?.sec_left &&
       responseData.data.sec_left > 0
     ) {
-      this.log.debug("StokRefresh: Temporary Suspension (40404)", responseData);
+      this.log.debug("refreshStok: Temporary Suspension (40404)", responseData);
 
       throw new Error(
-        `StokRefresh: Temporary Suspension: Try again in ${responseData.data.sec_left} seconds`
+        `refreshStok: Temporary Suspension: Try again in ${responseData.data.sec_left} seconds`
       );
     }
 
     if (responseData?.result?.stok) {
       this.stok = responseData.result.stok;
-      this.log.debug("StokRefresh: Success :>>", this.stok);
+      this.log.debug("refreshStok: Success :>>", this.stok);
       return this.stok!;
     }
 
@@ -488,7 +490,11 @@ export class TAPOCamera extends OnvifCamera {
             responseData = responseDataTmp as TAPOCameraResponse;
           }
 
-          this.log.debug("API response", response.status, responseData);
+          this.log.debug(
+            "API response",
+            response.status,
+            JSON.stringify(responseData)
+          );
 
           // Apparently the Tapo C200 returns 500 on successful requests,
           // but it's indicating an expiring token, therefore refresh the token next time
@@ -503,11 +509,7 @@ export class TAPOCamera extends OnvifCamera {
             responseData.error_code === -40401 ||
             responseData.error_code === -1
           ) {
-            this.log.debug(
-              "API request failed, trying reauth",
-              response.status,
-              responseData
-            );
+            this.log.debug("API request failed, trying reauth");
             this.stok = undefined;
             return this.apiRequest(req, loginRetryCount + 1);
           }
@@ -603,7 +605,7 @@ export class TAPOCamera extends OnvifCamera {
     return operation.result;
   }
 
-  async getBasicInfo() {
+  async getBasicInfo(): Promise<TAPOBasicInfo> {
     const responseData = await this.apiRequest({
       method: "multipleRequest",
       params: {
