@@ -76,13 +76,9 @@ export class CameraAccessory {
   }
 
   private setupInfoAccessory(basicInfo: TAPOBasicInfo) {
-    this.infoAccessory = this.accessory.getService(
-      this.api.hap.Service.AccessoryInformation
-    );
-    if (!this.infoAccessory) {
-      this.infoAccessory = new this.api.hap.Service.AccessoryInformation();
-      this.accessory.addService(this.infoAccessory);
-    }
+    this.infoAccessory =
+      this.accessory.getService(this.api.hap.Service.AccessoryInformation) ||
+      this.accessory.addService(this.api.hap.Service.AccessoryInformation);
     this.infoAccessory
       .setCharacteristic(this.api.hap.Characteristic.Manufacturer, "TAPO")
       .setCharacteristic(
@@ -101,10 +97,12 @@ export class CameraAccessory {
 
   private setupToggleAccessory(name: string, tapoServiceStr: keyof Status) {
     try {
-      const toggleService = new this.api.hap.Service.Switch(
+      const toggleService = this.accessory.addService(
+        this.api.hap.Service.Switch,
         name,
         tapoServiceStr
       );
+      this.toggleAccessories[tapoServiceStr] = toggleService;
 
       // Add name
       toggleService.setCharacteristic(this.api.hap.Characteristic.Name, name);
@@ -148,12 +146,9 @@ export class CameraAccessory {
             );
           }
         });
-
-      this.accessory.addService(toggleService);
-      this.toggleAccessories[tapoServiceStr] = toggleService;
     } catch (err) {
       this.log.error(
-        "Error setting up toggle accessory:",
+        "Error setting up toggle accessory",
         name,
         tapoServiceStr,
         err
@@ -205,9 +200,19 @@ export class CameraAccessory {
 
   private async setupMotionSensorAccessory() {
     try {
-      this.motionSensorService = new this.api.hap.Service.MotionSensor(
+      this.motionSensorService = this.accessory.addService(
+        this.platform.api.hap.Service.MotionSensor,
         "Motion Sensor",
         "motion"
+      );
+
+      this.motionSensorService.setCharacteristic(
+        this.api.hap.Characteristic.Name,
+        "Motion Sensor"
+      );
+      this.motionSensorService.setCharacteristic(
+        this.api.hap.Characteristic.ConfiguredName,
+        "Motion Sensor"
       );
 
       const eventEmitter = await this.camera.getEventEmitter();
@@ -219,8 +224,6 @@ export class CameraAccessory {
           motionDetected
         );
       });
-
-      this.accessory.addService(this.motionSensorService);
     } catch (err) {
       this.log.error("Error setting up motion sensor accessory:", err);
     }
@@ -311,11 +314,12 @@ export class CameraAccessory {
     this.log.debug("Publishing accessory...");
     this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
 
-    // // Setup the polling by giving a 3s random delay
-    // // to avoid all the cameras starting at the same time
+    // Setup the polling by giving a random delay
+    // to avoid all the cameras starting at the same time
+    this.log.debug("Setting up polling...");
     setTimeout(() => {
       this.setupPolling();
-    }, this.randomSeed * 5000);
+    }, this.randomSeed * 3_000);
 
     this.log.debug("Notifying initial values...");
     await this.getStatusAndNotify();

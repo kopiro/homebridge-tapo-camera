@@ -2,7 +2,6 @@ import { Logging } from "homebridge";
 import { CameraConfig } from "./cameraAccessory";
 import {
   DeviceInformation,
-  VideoSource,
   NotificationMessage,
   Cam as ICam,
 } from "./types/onvif";
@@ -36,9 +35,7 @@ export class OnvifCamera {
           port: this.kOnvifPort,
         },
         (err: Error) => {
-          if (err) {
-            return reject(err);
-          }
+          if (err) return reject(err);
           this.device = device;
           return resolve(this.device);
         }
@@ -56,7 +53,7 @@ export class OnvifCamera {
     let lastMotionValue = false;
 
     this.events = new EventEmitter();
-    this.log.debug("Starting ONVIF listener");
+    this.log.debug("Starting ONVIF listener...");
 
     onvifDevice.on("event", (event: NotificationMessage) => {
       if (event?.topic?._?.match(/RuleEngine\/CellMotionDetector\/Motion$/)) {
@@ -70,11 +67,6 @@ export class OnvifCamera {
     });
 
     return this.events;
-  }
-
-  async getVideoSource(): Promise<VideoSource> {
-    const onvifDevice = await this.getDevice();
-    return onvifDevice.videoSources[0];
   }
 
   async getDeviceInfo(): Promise<DeviceInformation> {
