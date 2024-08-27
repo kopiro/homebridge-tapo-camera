@@ -257,14 +257,14 @@ export class CameraAccessory {
     const basicInfo = await this.camera.getBasicInfo();
     this.log.debug("Basic info", basicInfo);
 
-    // const cameraInfo = await this.camera.getDeviceInfo();
-    // this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-    //   this.log.info("Identify requested", cameraInfo);
-    // });
+    const cameraInfo = await this.camera.getDeviceInfo();
+    this.log.debug("Camera info", cameraInfo);
 
-    // this.log.debug("Camera info", cameraInfo);
+    this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
+      this.log.info("Identify requested", cameraInfo, basicInfo);
+    });
 
-    // this.setupInfoAccessory(cameraInfo);
+    this.setupInfoAccessory(cameraInfo);
 
     // if (!this.config.disableStreaming) {
     //   this.setupCameraStreaming(cameraInfo);
@@ -310,8 +310,8 @@ export class CameraAccessory {
     // }
 
     // // Publish as external accessory
-    // this.log.debug("Publishing accessory...");
-    // this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
+    this.log.debug("Publishing accessory...");
+    this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
 
     // this.log.debug("Notifying initial values...");
     // await this.getStatusAndNotify();
