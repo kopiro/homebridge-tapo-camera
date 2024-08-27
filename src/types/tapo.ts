@@ -218,6 +218,10 @@ export type TAPOBasicInfo = {
   hw_version: string;
   sw_version: string;
   device_alias: string;
+  avatar: string;
+  longitude: number;
+  latitude: number;
+  has_set_location_info: boolean;
   features: string;
   barcode: string;
   mac: string;
