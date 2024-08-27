@@ -180,22 +180,26 @@ export class CameraAccessory {
   }
 
   private async setupCameraStreaming(deviceInfo: DeviceInformation) {
-    const delegate = new StreamingDelegate(
-      new Logger(this.log),
-      {
-        name: this.config.name,
-        manufacturer: deviceInfo.manufacturer,
-        model: deviceInfo.model,
-        serialNumber: deviceInfo.serialNumber,
-        firmwareRevision: deviceInfo.firmwareVersion,
-        unbridge: true,
-        videoConfig: this.getVideoConfig(),
-      },
-      this.api,
-      this.api.hap
-    );
+    try {
+      const delegate = new StreamingDelegate(
+        new Logger(this.log),
+        {
+          name: this.config.name,
+          manufacturer: deviceInfo.manufacturer,
+          model: deviceInfo.model,
+          serialNumber: deviceInfo.serialNumber,
+          firmwareRevision: deviceInfo.firmwareVersion,
+          unbridge: true,
+          videoConfig: this.getVideoConfig(),
+        },
+        this.api,
+        this.api.hap
+      );
 
-    this.accessory.configureController(delegate.controller);
+      this.accessory.configureController(delegate.controller);
+    } catch (err) {
+      this.log.error("Error setting up camera streaming:", err);
+    }
   }
 
   private async setupMotionSensorAccessory() {
@@ -306,14 +310,13 @@ export class CameraAccessory {
     this.log.debug("Publishing accessory...");
     this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
 
-    setImmediate(() => {
-      this.getStatusAndNotify();
-    });
+    this.log.debug("Notifying initial values...");
+    await this.getStatusAndNotify();
 
     // Setup the polling by giving a 3s random delay
     // to avoid all the cameras starting at the same time
     setTimeout(() => {
       this.setupPolling();
-    }, this.randomSeed * 3000);
+    }, this.randomSeed * 5000);
   }
 }
