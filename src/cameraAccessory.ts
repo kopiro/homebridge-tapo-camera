@@ -99,53 +99,65 @@ export class CameraAccessory {
   }
 
   private setupToggleAccessory(name: string, tapoServiceStr: keyof Status) {
-    const toggleService = new this.api.hap.Service.Switch(name, tapoServiceStr);
+    try {
+      const toggleService = new this.api.hap.Service.Switch(
+        name,
+        tapoServiceStr
+      );
 
-    // Add name
-    toggleService.setCharacteristic(this.api.hap.Characteristic.Name, name);
-    toggleService.setCharacteristic(
-      this.api.hap.Characteristic.ConfiguredName,
-      name
-    );
+      // Add name
+      toggleService.setCharacteristic(this.api.hap.Characteristic.Name, name);
+      toggleService.setCharacteristic(
+        this.api.hap.Characteristic.ConfiguredName,
+        name
+      );
 
-    toggleService
-      .getCharacteristic(this.api.hap.Characteristic.On)
-      .onGet(async () => {
-        try {
-          this.log.debug(`Getting "${tapoServiceStr}" status...`);
+      toggleService
+        .getCharacteristic(this.api.hap.Characteristic.On)
+        .onGet(async () => {
+          try {
+            this.log.debug(`Getting "${tapoServiceStr}" status...`);
 
-          const cameraStatus = await this.camera.getStatus();
-          const value = cameraStatus[tapoServiceStr];
-          if (value !== undefined) {
-            return value;
+            const cameraStatus = await this.camera.getStatus();
+            const value = cameraStatus[tapoServiceStr];
+            if (value !== undefined) {
+              return value;
+            }
+
+            this.log.debug(
+              `Status "${tapoServiceStr}" not found in status`,
+              cameraStatus
+            );
+            return null;
+          } catch (err) {
+            this.log.error("Error getting status:", err);
+            return null;
           }
+        })
+        .onSet(async (newValue) => {
+          try {
+            this.log.debug(
+              `Setting "${tapoServiceStr}" to ${newValue ? "on" : "off"}...`
+            );
+            this.camera.setStatus(tapoServiceStr, Boolean(newValue));
+          } catch (err) {
+            this.log.error("Error setting status:", err);
+            throw new this.api.hap.HapStatusError(
+              this.api.hap.HAPStatus.RESOURCE_DOES_NOT_EXIST
+            );
+          }
+        });
 
-          this.log.debug(
-            `Status "${tapoServiceStr}" not found in status`,
-            cameraStatus
-          );
-          return null;
-        } catch (err) {
-          this.log.error("Error getting status:", err);
-          return null;
-        }
-      })
-      .onSet(async (newValue) => {
-        try {
-          this.log.debug(
-            `Setting "${tapoServiceStr}" to ${newValue ? "on" : "off"}...`
-          );
-          this.camera.setStatus(tapoServiceStr, Boolean(newValue));
-        } catch (err) {
-          this.log.error("Error setting status:", err);
-          throw new this.api.hap.HapStatusError(
-            this.api.hap.HAPStatus.RESOURCE_DOES_NOT_EXIST
-          );
-        }
-      });
-
-    this.accessory.addService(toggleService);
-    this.toggleAccessories[tapoServiceStr] = toggleService;
+      this.accessory.addService(toggleService);
+      this.toggleAccessories[tapoServiceStr] = toggleService;
+    } catch (err) {
+      this.log.error(
+        "Error setting up toggle accessory:",
+        name,
+        tapoServiceStr,
+        err
+      );
+    }
   }
 
   private getVideoConfig(): VideoConfig {
@@ -187,22 +199,26 @@ export class CameraAccessory {
   }
 
   private async setupMotionSensorAccessory() {
-    this.motionSensorService = new this.api.hap.Service.MotionSensor(
-      "Motion Sensor",
-      "motion"
-    );
-
-    const eventEmitter = await this.camera.getEventEmitter();
-    eventEmitter.addListener("motion", (motionDetected) => {
-      this.log.debug("Motion detected", motionDetected);
-
-      this.motionSensorService?.updateCharacteristic(
-        this.api.hap.Characteristic.MotionDetected,
-        motionDetected
+    try {
+      this.motionSensorService = new this.api.hap.Service.MotionSensor(
+        "Motion Sensor",
+        "motion"
       );
-    });
 
-    this.accessory.addService(this.motionSensorService);
+      const eventEmitter = await this.camera.getEventEmitter();
+      eventEmitter.addListener("motion", (motionDetected) => {
+        this.log.debug("Motion detected", motionDetected);
+
+        this.motionSensorService?.updateCharacteristic(
+          this.api.hap.Characteristic.MotionDetected,
+          motionDetected
+        );
+      });
+
+      this.accessory.addService(this.motionSensorService);
+    } catch (err) {
+      this.log.error("Error setting up motion sensor accessory:", err);
+    }
   }
 
   private setupPolling() {
@@ -235,6 +251,11 @@ export class CameraAccessory {
 
   async setup() {
     const cameraInfo = await this.camera.getDeviceInfo();
+    this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
+      this.log.info("Identify requested", cameraInfo);
+    });
+
+    this.log.debug("Camera info", cameraInfo);
 
     this.setupInfoAccessory(cameraInfo);
 
@@ -282,10 +303,8 @@ export class CameraAccessory {
     }
 
     // Publish as external accessory
+    this.log.debug("Publishing accessory", this.accessory);
     this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
-    this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log.info("Identify requested", cameraInfo);
-    });
 
     setImmediate(() => {
       this.getStatusAndNotify();
