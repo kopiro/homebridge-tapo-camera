@@ -303,7 +303,7 @@ export class CameraAccessory {
     }
 
     // Publish as external accessory
-    this.log.debug("Publishing accessory", this.accessory);
+    this.log.debug("Publishing accessory...");
     this.api.publishExternalAccessories(PLUGIN_ID, [this.accessory]);
 
     setImmediate(() => {
