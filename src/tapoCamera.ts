@@ -44,7 +44,7 @@ export class TAPOCamera extends OnvifCamera {
   private readonly kStreamPort = 554;
   private readonly fetchAgent: Agent;
 
-  private readonly hashedMD5Password: string;
+  private readonly hashedPassword: string;
   private readonly hashedSha256Password: string;
   private passwordEncryptionMethod: "md5" | "sha256" | null = null;
 
@@ -75,7 +75,7 @@ export class TAPOCamera extends OnvifCamera {
 
     this.cnonce = this.generateCnonce();
 
-    this.hashedMD5Password = crypto
+    this.hashedPassword = crypto
       .createHash("md5")
       .update(config.password)
       .digest("hex")
@@ -106,7 +106,7 @@ export class TAPOCamera extends OnvifCamera {
 
   private getHashedPassword() {
     if (this.passwordEncryptionMethod === "md5") {
-      return this.hashedMD5Password;
+      return this.hashedPassword;
     } else if (this.passwordEncryptionMethod === "sha256") {
       return this.hashedSha256Password;
     } else {
@@ -160,7 +160,7 @@ export class TAPOCamera extends OnvifCamera {
 
     const hashedNoncesWithMD5 = crypto
       .createHash("md5")
-      .update(this.cnonce + this.hashedMD5Password + nonce)
+      .update(this.cnonce + this.hashedPassword + nonce)
       .digest("hex")
       .toUpperCase();
     if (deviceConfirm === hashedNoncesWithMD5 + nonce + this.cnonce) {
@@ -207,7 +207,7 @@ export class TAPOCamera extends OnvifCamera {
           method: "login",
           params: {
             username: this.getUsername(),
-            password: this.getHashedPassword(),
+            password: this.hashedPassword,
             hashed: true,
           },
         }),
