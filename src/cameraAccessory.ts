@@ -38,6 +38,7 @@ export type CameraConfig = {
   videoForceMax?: boolean;
   videoMaxBirate?: number;
   videoPacketSize?: number;
+  videoCodec?: string;
 
   videoConfig?: VideoConfig;
 
@@ -170,11 +171,18 @@ export class CameraAccessory {
       Boolean(this.config.lowQuality)
     );
 
+    const vcodec = this.config.videoCodec ?? "copy";
+
+    if (vcodec === "copy") {
+      this.log.warn(
+        "You're using the default 'copy' codec. This means that any maximum resolution, FPS, or bitrate you set will be ignored, and you're pushing the camera's native stream directly to HomeKit. This can cause issues if the camera's native stream is not compatible with HomeKit. If you're experiencing issues, try setting a custom codec."
+      );
+    }
+
     const config: VideoConfig = {
       source: `-i ${streamUrl}`,
       audio: true,
-      videoFilter: "none",
-      vcodec: "copy",
+      vcodec: vcodec,
       maxWidth: this.config.videoMaxWidth,
       maxHeight: this.config.videoMaxHeight,
       maxFPS: this.config.videoMaxFPS,
