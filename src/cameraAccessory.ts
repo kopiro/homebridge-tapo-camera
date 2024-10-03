@@ -172,13 +172,6 @@ export class CameraAccessory {
     );
 
     const vcodec = this.config.videoCodec ?? "copy";
-
-    if (vcodec === "copy") {
-      this.log.warn(
-        "You're using the default 'copy' codec. This means that any maximum resolution, FPS, or bitrate you set will be ignored, and you're pushing the camera's native stream directly to HomeKit. This can cause issues if the camera's native stream is not compatible with HomeKit. If you're experiencing issues, try setting a custom codec."
-      );
-    }
-
     const config: VideoConfig = {
       audio: true, // Set audio as true as most of TAPO cameras have audio
       vcodec: vcodec,

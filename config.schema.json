@@ -187,7 +187,7 @@
                 "copy"
               ]
             },
-            "description": "Set the codec used for encoding video sent to HomeKit, must be H.264-based. You can change to a hardware accelerated video codec with this option, if one is available. By default, we set 'copy' to avoid any video processing happening on the Homebridge server, but this also means possibly sending more bits to your device than necessary. Also, consider that setting 'copy' will discard all of the 'max' settings above."
+            "description": "Set the codec used for encoding video sent to HomeKit, must be H.264-based. You can change to a hardware accelerated video codec with this option, if one is available. By default, we set 'copy' to avoid any video processing happening on the Homebridge server and disregarding any max values set above, but this also means possibly sending more video data to your devices than necessary, and some Homekit clients may not like not receiving the resolutions/fps they asked for. If you select a custom codec and your ffmpeg process is crashing, it most likely can't handle the video codec you've chosen."
           }
         }
       }
