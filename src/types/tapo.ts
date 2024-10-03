@@ -46,6 +46,14 @@ export type TAPOCameraGetRequest =
           name: "config";
         };
       };
+    }
+  | {
+      method: "getWhitelampStatus";
+      params: {
+        image: {
+          get_wtl_status: "null";
+        };
+      };
     };
 
 export type TAPOCameraSetRequest =
@@ -99,6 +107,16 @@ export type TAPOCameraSetRequest =
         led: {
           config: {
             enabled: "on" | "off";
+          };
+        };
+      };
+    }
+  | {
+      method: "setWhitelampConfig";
+      params: {
+        image: {
+          switch: {
+            wtl_intensity_level: string;
           };
         };
       };

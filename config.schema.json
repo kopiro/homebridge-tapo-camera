@@ -131,6 +131,41 @@
             "type": "string",
             "description": "Name of the LED toggle",
             "placeholder": "LED"
+          },
+          "videoMaxWidth": {
+            "title": "Video Max Width",
+            "type": "integer",
+            "description": "Maximum width of the video stream",
+            "placeholder": 1280
+          },
+          "videoMaxHeight": {
+            "title": "Video Max Height",
+            "type": "integer",
+            "description": "Maximum height of the video stream",
+            "placeholder": 720
+          },
+          "videoMaxFPS": {
+            "title": "Video Max FPS",
+            "type": "integer",
+            "description": "Maximum frames per second of the video stream",
+            "placeholder": 30
+          },
+          "videoMaxBitrate": {
+            "title": "Video Max Bitrate",
+            "type": "integer",
+            "description": "Maximum bitrate of the video stream",
+            "placeholder": 300
+          },
+          "videoPacketSize": {
+            "title": "Video Packet Size",
+            "type": "integer",
+            "description": "Size of the video packets",
+            "placeholder": 1316
+          },
+          "videoForceMax": {
+            "title": "Force Max Video",
+            "type": "boolean",
+            "description": "Force the video stream to use the maximum values"
           }
         }
       }

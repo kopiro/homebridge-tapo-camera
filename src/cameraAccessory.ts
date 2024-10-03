@@ -32,6 +32,13 @@ export type CameraConfig = {
   disableMotionSensorAccessory?: boolean;
   lowQuality?: boolean;
 
+  videoMaxWidth?: number;
+  videoMaxHeight?: number;
+  videoMaxFPS?: number;
+  videoForceMax?: boolean;
+  videoMaxBirate?: number;
+  videoPacketSize?: number;
+
   videoConfig?: VideoConfig;
 
   eyesToggleAccessoryName?: string;
@@ -168,10 +175,12 @@ export class CameraAccessory {
       audio: true,
       videoFilter: "none",
       vcodec: "copy",
-      maxWidth: this.config.lowQuality ? 640 : 1920,
-      maxHeight: this.config.lowQuality ? 480 : 1080,
-      maxFPS: 15,
-      forceMax: true,
+      maxWidth: this.config.videoMaxWidth,
+      maxHeight: this.config.videoMaxHeight,
+      maxFPS: this.config.videoMaxFPS,
+      maxBitrate: this.config.videoMaxBirate,
+      packetSize: this.config.videoPacketSize,
+      forceMax: this.config.videoForceMax,
       ...(this.config.videoConfig || {}),
     };
     return config;
