@@ -193,6 +193,8 @@ export class CameraAccessory {
       source: `-i ${streamUrl}`,
     };
 
+    this.log.debug("Video config", config);
+
     return config;
   }
 
