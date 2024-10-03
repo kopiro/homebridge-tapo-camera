@@ -132,14 +132,13 @@
             "description": "Name of the LED toggle",
             "placeholder": "LED"
           },
-
           "videoMaxWidth": {
             "title": "Video Max Width",
             "type": "integer",
             "placeholder": 1280,
             "multipleOf": 2,
             "minimum": 0,
-            "description": "The maximum width used for video streamed to HomeKit. If set to 0, the resolution of the source is used. If not set, will use any size HomeKit requests."
+            "description": "The maximum width used for video streamed to HomeKit. If set to 0, or videoCodec is set to 'copy' (default), the resolution of the source is used. If not set, will use any size HomeKit requests."
           },
           "videoMaxHeight": {
             "title": "Video Max Height",
@@ -147,21 +146,21 @@
             "placeholder": 720,
             "multipleOf": 2,
             "minimum": 0,
-            "description": "The maximum height used for video streamed to HomeKit. If set to 0, the resolution of the source is used. If not set, will use any size HomeKit requests."
+            "description": "The maximum height used for video streamed to HomeKit. If set to 0, or videoCodec is set to 'copy' (default), the resolution of the source is used. If not set, will use any size HomeKit requests."
           },
           "videoMaxFPS": {
             "title": "Video Max FPS",
             "type": "integer",
             "placeholder": 30,
             "minimum": 0,
-            "description": "The maximum frame rate used for video streamed to HomeKit. If set to 0, the framerate of the source is used. If not set, will use any framerate HomeKit requests."
+            "description": "The maximum frame rate used for video streamed to HomeKit. If set to 0, or videoCodec is set to 'copy' (default), the framerate of the source is used. If not set, will use any framerate HomeKit requests."
           },
           "videoMaxBitrate": {
             "title": "Video Max Bitrate",
             "type": "integer",
             "placeholder": 299,
             "minimum": 0,
-            "description": "The maximum bitrate used for video streamed to HomeKit, in kbit/s. If not set, will use any bitrate HomeKit requests."
+            "description": "The maximum bitrate used for video streamed to HomeKit, in kbit/s. If not set, or videoCodec is set to 'copy' (default), it will use any bitrate HomeKit requests."
           },
           "videoPacketSize": {
             "title": "Video Packet Size",
@@ -169,17 +168,17 @@
             "placeholder": 1316,
             "multipleOf": 188,
             "minimum": 188,
-            "description": "If audio or video is choppy try a smaller value."
+            "description": "If audio or video is choppy try a smaller value. If not set, or videoCodec is set to 'copy' (default), it will use any packet size HomeKit requests."
           },
           "videoForceMax": {
             "title": "Force Max Video",
             "type": "boolean",
-            "description": "If set, the settings requested by HomeKit will be overridden with any 'maximum' values defined in this config."
+            "description": "If set, the settings requested by HomeKit will be overridden with any 'maximum' values defined in this config. If videoCodec is set to 'copy' (default), this setting set to true is useless."
           },
           "videoCodec": {
             "title": "Video Codec",
             "type": "string",
-            "placeholder": "libx264",
+            "placeholder": "copy",
             "typeahead": {
               "source": [
                 "libx264",
@@ -188,7 +187,7 @@
                 "copy"
               ]
             },
-            "description": "Set the codec used for encoding video sent to HomeKit, must be H.264-based. You can change to a hardware accelerated video codec with this option, if one is available. *By default, we set 'copy' to avoid any video processing happening on the Homebridge server, but this also means possibly sending more bits to your device than necessary. Also, consider that setting 'copy' will discard all of the following options: videoMaxWidth, videoMaxHeight, videoMaxFPS, videoMaxBirate and videoPacketSize*"
+            "description": "Set the codec used for encoding video sent to HomeKit, must be H.264-based. You can change to a hardware accelerated video codec with this option, if one is available. By default, we set 'copy' to avoid any video processing happening on the Homebridge server, but this also means possibly sending more bits to your device than necessary. Also, consider that setting 'copy' will discard all of the 'max' settings above."
           }
         }
       }

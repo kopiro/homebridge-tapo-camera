@@ -180,8 +180,7 @@ export class CameraAccessory {
     }
 
     const config: VideoConfig = {
-      source: `-i ${streamUrl}`,
-      audio: true,
+      audio: true, // Set audio as true as most of TAPO cameras have audio
       vcodec: vcodec,
       maxWidth: this.config.videoMaxWidth,
       maxHeight: this.config.videoMaxHeight,
@@ -190,6 +189,8 @@ export class CameraAccessory {
       packetSize: this.config.videoPacketSize,
       forceMax: this.config.videoForceMax,
       ...(this.config.videoConfig || {}),
+      // We add this at the end as the user most not be able to override it
+      source: `-i ${streamUrl}`,
     };
 
     return config;
