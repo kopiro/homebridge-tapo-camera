@@ -2,8 +2,8 @@
   "pluginAlias": "tapo-camera",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "Homebridge plugin for TP-Link TAPO security cameras",
-  "footerDisplay": null,
+  "headerDisplay": "Homebridge plugin for TP-Link TAPO security cameras.",
+  "footerDisplay": "If your video feed is not working, try to check if any of the parameters at the video config can be tuned. You can use https://sunoo.github.io/homebridge-camera-ffmpeg/configs to check if someone has already found the right values for your camera.",
   "form": null,
   "display": null,
   "schema": {
@@ -100,7 +100,7 @@
           "lowQuality": {
             "title": "Low Quality",
             "type": "boolean",
-            "description": "Video stream will be requested in low-quality (640x480) instead of HQ (1920x1080)"
+            "description": "Video stream will be requested in low-quality instead of high-quality"
           },
           "eyesToggleAccessoryName": {
             "title": "Eyes (privacy mode) toggle Name",
@@ -132,6 +132,7 @@
             "description": "Name of the LED toggle",
             "placeholder": "LED"
           },
+
           "videoMaxWidth": {
             "title": "Video Max Width",
             "type": "integer",
@@ -165,7 +166,7 @@
           "videoForceMax": {
             "title": "Force Max Video",
             "type": "boolean",
-            "description": "Force the video stream to use the maximum values"
+            "description": "Force the video stream to use the maximum values, instead of the one provided by the Homekit request. Most likely you don't want this"
           }
         }
       }

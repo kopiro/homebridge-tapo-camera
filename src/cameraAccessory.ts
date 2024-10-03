@@ -183,6 +183,7 @@ export class CameraAccessory {
       forceMax: this.config.videoForceMax,
       ...(this.config.videoConfig || {}),
     };
+
     return config;
   }
 
@@ -204,6 +205,8 @@ export class CameraAccessory {
       );
 
       this.accessory.configureController(delegate.controller);
+
+      this.log.debug("Camera streaming setup done");
     } catch (err) {
       this.log.error("Error setting up camera streaming:", err);
     }
