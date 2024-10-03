@@ -8,6 +8,8 @@ Make your TP-Link TAPO security camera compatible with Homekit through Homebridg
 
 The plugin exposes the camera RTSP video feed, and toggle accessories to configure your automations.
 
+If your video feed is not working, try to check if any of the parameters at the video config can be tuned. You can use [https://sunoo.github.io/homebridge-camera-ffmpeg/configs](https://sunoo.github.io/homebridge-camera-ffmpeg/configs) to check if someone has already found the right values for your camera.
+
 > [!IMPORTANT]
 > On firmware build 230921 and higher, [please follow this guide](https://github.com/JurajNyiri/HomeAssistant-Tapo-Control/blob/main/add_camera_with_new_firmware.md) to make your camera compatible with this integration.
 
