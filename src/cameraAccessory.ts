@@ -38,6 +38,7 @@ export type CameraConfig = {
   videoForceMax?: boolean;
   videoMaxBirate?: number;
   videoPacketSize?: number;
+  videoCodec?: string;
 
   videoConfig?: VideoConfig;
 
@@ -170,11 +171,10 @@ export class CameraAccessory {
       Boolean(this.config.lowQuality)
     );
 
+    const vcodec = this.config.videoCodec ?? "copy";
     const config: VideoConfig = {
-      source: `-i ${streamUrl}`,
-      audio: true,
-      videoFilter: "none",
-      vcodec: "copy",
+      audio: true, // Set audio as true as most of TAPO cameras have audio
+      vcodec: vcodec,
       maxWidth: this.config.videoMaxWidth,
       maxHeight: this.config.videoMaxHeight,
       maxFPS: this.config.videoMaxFPS,
@@ -182,7 +182,11 @@ export class CameraAccessory {
       packetSize: this.config.videoPacketSize,
       forceMax: this.config.videoForceMax,
       ...(this.config.videoConfig || {}),
+      // We add this at the end as the user most not be able to override it
+      source: `-i ${streamUrl}`,
     };
+
+    this.log.debug("Video config", config);
 
     return config;
   }
