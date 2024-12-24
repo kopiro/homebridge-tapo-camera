@@ -114,8 +114,9 @@ export class CameraAccessory {
       );
       this.toggleAccessories[tapoServiceStr] = toggleService;
 
-      // Add name
-      toggleService.setCharacteristic(this.api.hap.Characteristic.Name, name);
+      toggleService.addOptionalCharacteristic(
+        this.api.hap.Characteristic.ConfiguredName
+      );
       toggleService.setCharacteristic(
         this.api.hap.Characteristic.ConfiguredName,
         name
@@ -224,9 +225,8 @@ export class CameraAccessory {
         "motion"
       );
 
-      this.motionSensorService.setCharacteristic(
-        this.api.hap.Characteristic.Name,
-        "Motion Sensor"
+      this.motionSensorService.addOptionalCharacteristic(
+        this.api.hap.Characteristic.ConfiguredName
       );
       this.motionSensorService.setCharacteristic(
         this.api.hap.Characteristic.ConfiguredName,
