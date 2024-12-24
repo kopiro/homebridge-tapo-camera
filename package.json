@@ -45,18 +45,18 @@
   "dependencies": {
     "homebridge-camera-ffmpeg": "^3.1.4",
     "onvif": "^0.7.4",
-    "undici": "^6.19.5"
+    "undici": "^6.21.0"
   },
   "devDependencies": {
-    "@types/node": "^22.1.0",
-    "@typescript-eslint/eslint-plugin": "^7.17.0",
-    "@typescript-eslint/parser": "^7.17.0",
-    "dotenv": "^16.4.5",
-    "eslint": "^8.57.0",
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "dotenv": "^16.4.7",
+    "eslint": "^8.57.1",
     "homebridge": "^1.8.5",
-    "nodemon": "^3.1.4",
+    "nodemon": "^3.1.9",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.7.2"
   }
 }
