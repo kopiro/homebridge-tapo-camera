@@ -61,6 +61,7 @@ export class CameraAccessory {
 
   private infoAccessory: Service | undefined;
   private toggleAccessories: Partial<Record<keyof Status, Service>> = {};
+  private cachedStatus: Partial<Status> = {};
 
   private motionSensorService: Service | undefined;
 
@@ -128,28 +129,44 @@ export class CameraAccessory {
           try {
             this.log.debug(`Getting "${tapoServiceStr}" status...`);
 
-            const cameraStatus = await this.camera.getStatus();
-            const value = cameraStatus[tapoServiceStr];
-            if (value !== undefined) {
-              return value;
+            const cachedValue = this.cachedStatus[tapoServiceStr];
+            if (cachedValue !== undefined) {
+              return cachedValue;
+            }
+
+            const currentValue = toggleService.getCharacteristic(
+              this.api.hap.Characteristic.On
+            ).value;
+
+            void this.getStatusAndNotify();
+
+            if (typeof currentValue === "boolean") {
+              this.log.debug(
+                `No cached status for "${tapoServiceStr}", returning Homebridge cached value`
+              );
+              return currentValue;
             }
 
             this.log.debug(
-              `Status "${tapoServiceStr}" not found in status`,
-              cameraStatus
+              `No cached status for "${tapoServiceStr}", returning fallback value`
             );
-            return null;
+            return false;
           } catch (err) {
             this.log.error("Error getting status:", err);
-            return null;
+            return false;
           }
         })
         .onSet(async (newValue) => {
           try {
+            const value = Boolean(newValue);
             this.log.debug(
-              `Setting "${tapoServiceStr}" to ${newValue ? "on" : "off"}...`
+              `Setting "${tapoServiceStr}" to ${value ? "on" : "off"}...`
             );
-            this.camera.setStatus(tapoServiceStr, Boolean(newValue));
+            await this.camera.setStatus(tapoServiceStr, value);
+            this.cachedStatus[tapoServiceStr] = value;
+            toggleService
+              .getCharacteristic(this.api.hap.Characteristic.On)
+              .updateValue(value);
           } catch (err) {
             this.log.error("Error setting status:", err);
             throw new this.api.hap.HapStatusError(
@@ -261,6 +278,10 @@ export class CameraAccessory {
   private async getStatusAndNotify() {
     try {
       const cameraStatus = await this.camera.getStatus();
+      this.cachedStatus = {
+        ...this.cachedStatus,
+        ...cameraStatus,
+      };
       this.log.debug("Notifying new values...", cameraStatus);
 
       for (const [key, value] of Object.entries(cameraStatus)) {
