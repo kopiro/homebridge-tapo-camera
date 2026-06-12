@@ -44,6 +44,10 @@ export class OnvifCamera {
     });
   }
 
+  get onvifConnected(): boolean {
+    return !!this.device;
+  }
+
   async getEventEmitter() {
     if (this.events) {
       return this.events;
@@ -59,9 +63,9 @@ export class OnvifCamera {
     return this.events;
   }
 
-  async restartOnvifConnection() {
+  async restartOnvifConnection(): Promise<boolean> {
     if (!this.events) {
-      return;
+      return false;
     }
     this.log.debug("Restarting ONVIF connection...");
     if (this.device) {
@@ -70,8 +74,10 @@ export class OnvifCamera {
     }
     try {
       await this.startOnvifListener();
+      return true;
     } catch (err) {
       this.log.error("Failed to restart ONVIF connection", err);
+      return false;
     }
   }
 

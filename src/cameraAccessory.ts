@@ -286,11 +286,26 @@ export class CameraAccessory {
     try {
       const cameraStatus = await this.camera.getStatus();
       
-      if (this.isOffline) {
-        this.log.info("Camera is back online, restarting ONVIF connection...");
-        this.isOffline = false;
+      if (
+        this.isOffline ||
+        (!this.config.disableMotionSensorAccessory &&
+          !this.camera.onvifConnected)
+      ) {
+        let onvifSuccess = true;
         if (!this.config.disableMotionSensorAccessory) {
-          void this.camera.restartOnvifConnection();
+          this.log.info(
+            "Camera is back online, restarting ONVIF connection..."
+          );
+          onvifSuccess = await this.camera.restartOnvifConnection();
+        }
+
+        if (onvifSuccess) {
+          this.isOffline = false;
+        } else {
+          this.isOffline = true;
+          this.log.error(
+            "Failed to restart ONVIF connection, will retry next poll."
+          );
         }
       }
 
