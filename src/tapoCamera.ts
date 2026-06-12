@@ -46,7 +46,8 @@ export class TAPOCamera extends OnvifCamera {
 
   private readonly hashedPassword: string;
   private readonly hashedSha256Password: string;
-  private passwordEncryptionMethod: "md5" | "sha256" | null = null;
+  private readonly hashedSha1Password: string;
+  private passwordEncryptionMethod: "md5" | "sha256" | "sha1" | null = null;
 
   private isSecureConnectionValue: boolean | null = null;
 
@@ -85,6 +86,11 @@ export class TAPOCamera extends OnvifCamera {
       .update(config.password)
       .digest("hex")
       .toUpperCase();
+    this.hashedSha1Password = crypto
+      .createHash("sha1")
+      .update(config.password)
+      .digest("hex")
+      .toUpperCase();
   }
 
   private getUsername() {
@@ -109,6 +115,8 @@ export class TAPOCamera extends OnvifCamera {
       return this.hashedPassword;
     } else if (this.passwordEncryptionMethod === "sha256") {
       return this.hashedSha256Password;
+    } else if (this.passwordEncryptionMethod === "sha1") {
+      return this.hashedSha1Password;
     } else {
       throw new Error("Unknown password encryption method");
     }
@@ -168,14 +176,25 @@ export class TAPOCamera extends OnvifCamera {
       return true;
     }
 
+    const hashedNoncesWithSHA1 = crypto
+      .createHash("sha1")
+      .update(this.cnonce + this.hashedSha1Password + nonce)
+      .digest("hex")
+      .toUpperCase();
+    if (deviceConfirm === hashedNoncesWithSHA1 + nonce + this.cnonce) {
+      this.passwordEncryptionMethod = "sha1";
+      return true;
+    }
+
     this.log.debug(
-      'Invalid device confirm, expected "sha256" or "md5" to match, but none found',
+      'Invalid device confirm, expected "sha256", "md5", or "sha1" to match, but none found',
       {
         hashedNoncesWithMD5,
         hashedNoncesWithSHA256,
+        hashedNoncesWithSHA1,
         deviceConfirm,
         nonce,
-        cnonce: this,
+        cnonce: this.cnonce,
       }
     );
 
@@ -314,7 +333,8 @@ export class TAPOCamera extends OnvifCamera {
         }
       } else {
         if (
-          responseLoginData.error_code === -40413 &&
+          (responseLoginData.error_code === -40413 ||
+            responseLoginData.error_code === -40211) &&
           loginRetryCount < MAX_LOGIN_RETRIES
         ) {
           this.log.debug(
@@ -338,15 +358,12 @@ export class TAPOCamera extends OnvifCamera {
       responseData = responseLoginData;
     }
 
-    if (
-      responseData.result?.data?.sec_left &&
-      responseData.result.data.sec_left > 0
-    ) {
+    const secLeft =
+      responseData.result?.data?.sec_left ?? responseData.result?.sec_left;
+    if (secLeft && secLeft > 0) {
       this.log.debug("refreshStok: temporary suspension", responseData);
 
-      throw new Error(
-        `Temporary Suspension: Try again in ${responseData.result.data.sec_left} seconds`
-      );
+      throw new Error(`Temporary Suspension: Try again in ${secLeft} seconds`);
     }
 
     if (
@@ -379,7 +396,7 @@ export class TAPOCamera extends OnvifCamera {
       return this.refreshStok(loginRetryCount + 1);
     }
 
-    this.log.debug("refreshStock: Unexpected end of flow, raising exception");
+    this.log.debug("refreshStok: Unexpected end of flow, raising exception");
     throw new Error("Invalid authentication data");
   }
 
@@ -405,16 +422,19 @@ export class TAPOCamera extends OnvifCamera {
         JSON.stringify(responseData)
       );
 
+      const errCode = responseData?.error_code;
       this.isSecureConnectionValue =
-        responseData?.error_code == -40413 &&
-        String(responseData.result?.data?.encrypt_type || "")?.includes("3");
+        // -40211 = newer firmware requires cnonce in request (probe doesn't send it)
+        errCode == -40211 ||
+        (errCode == -40413 &&
+          String(responseData.result?.data?.encrypt_type || "")?.includes("3"));
     }
 
     return this.isSecureConnectionValue;
   }
 
   getStok(loginRetryCount = 0): Promise<string> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       if (this.stok) {
         return resolve(this.stok);
       }
@@ -430,6 +450,7 @@ export class TAPOCamera extends OnvifCamera {
           }
           resolve(this.stok!);
         })
+        .catch(reject)
         .finally(() => {
           this.stokPromise = undefined;
         });
