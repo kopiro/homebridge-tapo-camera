@@ -51,7 +51,7 @@ export class TAPOCamera extends OnvifCamera {
 
   private isSecureConnectionValue: boolean | null = null;
 
-  private stokPromise: (() => Promise<void>) | undefined;
+
 
   private readonly cnonce: string;
   private lsk: Buffer | undefined;
@@ -433,28 +433,27 @@ export class TAPOCamera extends OnvifCamera {
     return this.isSecureConnectionValue;
   }
 
+  private stokPromise: Promise<string> | undefined;
+
   getStok(loginRetryCount = 0): Promise<string> {
-    return new Promise((resolve, reject) => {
-      if (this.stok) {
-        return resolve(this.stok);
-      }
+    if (this.stok) {
+      return Promise.resolve(this.stok);
+    }
 
-      if (!this.stokPromise) {
-        this.stokPromise = () => this.refreshStok(loginRetryCount);
-      }
-
-      this.stokPromise()
+    if (!this.stokPromise) {
+      this.stokPromise = this.refreshStok(loginRetryCount)
         .then(() => {
           if (!this.stok) {
             throw new Error("STOK not found");
           }
-          resolve(this.stok!);
+          return this.stok;
         })
-        .catch(reject)
         .finally(() => {
           this.stokPromise = undefined;
         });
-    });
+    }
+
+    return this.stokPromise;
   }
 
   private async getAuthenticatedAPIURL(loginRetryCount = 0) {
@@ -519,8 +518,8 @@ export class TAPOCamera extends OnvifCamera {
   private pendingAPIRequests: Map<string, Promise<TAPOCameraResponse>> =
     new Map();
 
-  private async apiRequest(
-    req: TAPOCameraRequest,
+  private async apiRequest<T extends TAPOCameraRequest>(
+    req: T,
     loginRetryCount = 0
   ): Promise<TAPOCameraResponse> {
     const reqJson = JSON.stringify(req);
@@ -534,106 +533,102 @@ export class TAPOCamera extends OnvifCamera {
       this.log.debug("New API request", reqJson);
     }
 
-    this.pendingAPIRequests.set(
-      reqJson,
-      (async () => {
-        try {
-          const isSecureConnection = await this.isSecureConnection();
-          const url = await this.getAuthenticatedAPIURL(loginRetryCount);
+    const reqPromise = (async () => {
+      try {
+        const url = await this.getAuthenticatedAPIURL(loginRetryCount);
 
-          const fetchParams: RequestInit = {
-            method: "post",
+        let fetchParams: Record<string, unknown> = {};
+        const isSecureConnection = await this.isSecureConnection();
+
+        if (this.seq && isSecureConnection) {
+          const encryptedRequest: TAPOCameraEncryptedRequest = {
+            method: "securePassthrough",
+            params: {
+              request: Buffer.from(
+                this.encryptRequest(JSON.stringify(req))
+              ).toString("base64"),
+            },
           };
-
-          if (this.seq && isSecureConnection) {
-            const encryptedRequest: TAPOCameraEncryptedRequest = {
-              method: "securePassthrough",
-              params: {
-                request: Buffer.from(
-                  this.encryptRequest(JSON.stringify(req))
-                ).toString("base64"),
-              },
-            };
-            fetchParams.headers = {
-              ...this.getHeaders(),
-              Tapo_tag: this.getTapoTag(encryptedRequest),
-              Seq: this.seq.toString(),
-            };
-            fetchParams.body = JSON.stringify(encryptedRequest);
-            this.seq += 1;
-          } else {
-            fetchParams.body = JSON.stringify(req);
-          }
-
-          const response = await this.fetch(url, fetchParams);
-          const responseDataTmp = await response.json();
-
-          // Apparently the Tapo C200 returns 500 on successful requests,
-          // but it's indicating an expiring token, therefore refresh the token next time
-          if (isSecureConnection && response.status === 500) {
-            this.log.debug(
-              "Stok expired, reauthenticating on next request, setting STOK to undefined"
-            );
-            this.stok = undefined;
-          }
-
-          let responseData: TAPOCameraResponse | null = null;
-
-          if (isSecureConnection) {
-            const encryptedResponse =
-              responseDataTmp as TAPOCameraEncryptedResponse;
-            if (encryptedResponse?.result?.response) {
-              const decryptedResponse = this.decryptResponse(
-                encryptedResponse.result.response
-              );
-              responseData = JSON.parse(
-                decryptedResponse
-              ) as TAPOCameraResponse;
-            }
-          } else {
-            responseData = responseDataTmp as TAPOCameraResponse;
-          }
-
-          this.log.debug(
-            "API response",
-            response.status,
-            JSON.stringify(responseData)
-          );
-
-          // Log error codes
-          if (responseData && responseData.error_code !== 0) {
-            const errorCode = String(responseData.error_code);
-            const errorMessage =
-              errorCode in ERROR_CODES_MAP
-                ? ERROR_CODES_MAP[errorCode as keyof typeof ERROR_CODES_MAP]
-                : "Unknown error";
-            this.log.debug(
-              `API request failed with specific error code ${errorCode}: ${errorMessage}`
-            );
-          }
-
-          if (
-            !responseData ||
-            responseData.error_code === -40401 ||
-            responseData.error_code === -1
-          ) {
-            this.log.debug(
-              "API request failed, reauth now and trying same request again",
-              responseData
-            );
-            this.stok = undefined;
-            return this.apiRequest(req, loginRetryCount + 1);
-          }
-
-          // Success
-          return responseData;
-        } finally {
-          this.pendingAPIRequests.delete(reqJson);
+          fetchParams.headers = {
+            ...this.getHeaders(),
+            Tapo_tag: this.getTapoTag(encryptedRequest),
+            Seq: this.seq.toString(),
+          };
+          fetchParams.body = JSON.stringify(encryptedRequest);
+          this.seq += 1;
+        } else {
+          fetchParams.body = JSON.stringify(req);
         }
-      })()
-    );
 
-    return this.pendingAPIRequests.get(reqJson) as Promise<TAPOCameraResponse>;
+        const response = await this.fetch(url, fetchParams);
+        const responseDataTmp = await response.json();
+
+        // Apparently the Tapo C200 returns 500 on successful requests,
+        // but it's indicating an expiring token, therefore refresh the token next time
+        if (isSecureConnection && response.status === 500) {
+          this.log.debug(
+            "Stok expired, reauthenticating on next request, setting STOK to undefined"
+          );
+          this.stok = undefined;
+        }
+
+        let responseData: TAPOCameraResponse | null = null;
+
+        if (isSecureConnection) {
+          const encryptedResponse =
+            responseDataTmp as TAPOCameraEncryptedResponse;
+          if (encryptedResponse?.result?.response) {
+            const decryptedResponse = this.decryptResponse(
+              encryptedResponse.result.response
+            );
+            responseData = JSON.parse(
+              decryptedResponse
+            ) as TAPOCameraResponse;
+          }
+        } else {
+          responseData = responseDataTmp as TAPOCameraResponse;
+        }
+
+        this.log.debug(
+          "API response",
+          response.status,
+          JSON.stringify(responseData)
+        );
+
+        // Log error codes
+        if (responseData && responseData.error_code !== 0) {
+          const errorCode = String(responseData.error_code);
+          const errorMessage =
+            errorCode in ERROR_CODES_MAP
+              ? ERROR_CODES_MAP[errorCode as keyof typeof ERROR_CODES_MAP]
+              : "Unknown error";
+          this.log.debug(
+            `API request failed with specific error code ${errorCode}: ${errorMessage}`
+          );
+        }
+
+        if (
+          !responseData ||
+          responseData.error_code === -40401 ||
+          responseData.error_code === -1
+        ) {
+          this.log.debug(
+            "API request failed, reauth now and trying same request again",
+            responseData
+          );
+          this.stok = undefined;
+          return this.apiRequest(req, loginRetryCount + 1);
+        }
+
+        // Success
+        return responseData;
+      } finally {
+        this.pendingAPIRequests.delete(reqJson);
+      }
+    })();
+
+    this.pendingAPIRequests.set(reqJson, reqPromise);
+    return reqPromise;
   }
 
   static SERVICE_MAP: Record<
