@@ -193,15 +193,21 @@ export class CameraAccessory {
     const config: VideoConfig = {
       audio: true, // Set audio as true as most of TAPO cameras have audio
       vcodec: vcodec,
+      // libx264: force Baseline profile and 1s keyframe interval for HomeKit compatibility.
+      ...(vcodec === "libx264" && {
+        encoderOptions: "-preset ultrafast -tune zerolatency -profile:v baseline -level:v 3.1 -g 30",
+      }),
       maxWidth: this.config.videoMaxWidth,
       maxHeight: this.config.videoMaxHeight,
       maxFPS: this.config.videoMaxFPS,
       maxBitrate: this.config.videoMaxBirate,
       packetSize: this.config.videoPacketSize,
       forceMax: this.config.videoForceMax,
+      // async resampling prevents backward audio DTS from pcm_alaw packet jitter.
+      mapaudio: "0:a:0 -af aresample=async=16000",
       ...(this.config.videoConfig || {}),
-      // We add this at the end as the user most not be able to override it
-      source: `-i ${streamUrl}`,
+      // We add this at the end as the user must not be able to override it
+      source: `-rtsp_transport tcp -i ${streamUrl}`,
     };
 
     this.log.debug("Video config", config);
