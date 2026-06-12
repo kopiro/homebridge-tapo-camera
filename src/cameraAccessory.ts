@@ -62,6 +62,7 @@ export class CameraAccessory {
   private infoAccessory: Service | undefined;
   private toggleAccessories: Partial<Record<keyof Status, Service>> = {};
   private cachedStatus: Partial<Status> = {};
+  private isOffline = false;
 
   private motionSensorService: Service | undefined;
 
@@ -284,6 +285,15 @@ export class CameraAccessory {
   private async getStatusAndNotify() {
     try {
       const cameraStatus = await this.camera.getStatus();
+      
+      if (this.isOffline) {
+        this.log.info("Camera is back online, restarting ONVIF connection...");
+        this.isOffline = false;
+        if (!this.config.disableMotionSensorAccessory) {
+          void this.camera.restartOnvifConnection();
+        }
+      }
+
       this.cachedStatus = {
         ...this.cachedStatus,
         ...cameraStatus,
@@ -300,6 +310,7 @@ export class CameraAccessory {
       }
     } catch (err) {
       this.log.error("Error getting status:", err);
+      this.isOffline = true;
     }
   }
 

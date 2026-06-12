@@ -13,6 +13,7 @@ import { EventEmitter } from "stream";
 export class OnvifCamera {
   private events: EventEmitter | undefined;
   private device: Cam | undefined;
+  private lastMotionValue = false;
 
   private readonly kOnvifPort = 2020;
 
@@ -48,25 +49,48 @@ export class OnvifCamera {
       return this.events;
     }
 
+    this.events = new EventEmitter();
+    try {
+      await this.startOnvifListener();
+    } catch (err) {
+      this.log.error("Failed to start ONVIF listener, will retry later", err);
+    }
+
+    return this.events;
+  }
+
+  async restartOnvifConnection() {
+    if (!this.events) {
+      return;
+    }
+    this.log.debug("Restarting ONVIF connection...");
+    if (this.device) {
+      this.device.removeAllListeners("event");
+      this.device = undefined;
+    }
+    try {
+      await this.startOnvifListener();
+    } catch (err) {
+      this.log.error("Failed to restart ONVIF connection", err);
+    }
+  }
+
+  private async startOnvifListener() {
     const onvifDevice = await this.getDevice();
 
-    let lastMotionValue = false;
-
-    this.events = new EventEmitter();
     this.log.debug("Starting ONVIF listener...");
 
     onvifDevice.on("event", (event: NotificationMessage) => {
       if (event?.topic?._?.match(/RuleEngine\/CellMotionDetector\/Motion$/)) {
         const motion = event.message.message.data.simpleItem.$.Value;
-        if (motion !== lastMotionValue) {
-          lastMotionValue = Boolean(motion);
-          this.events = this.events || new EventEmitter();
-          this.events.emit("motion", motion);
+        if (motion !== this.lastMotionValue) {
+          this.lastMotionValue = Boolean(motion);
+          if (this.events) {
+            this.events.emit("motion", motion);
+          }
         }
       }
     });
-
-    return this.events;
   }
 
   async getDeviceInfo(): Promise<DeviceInformation> {
