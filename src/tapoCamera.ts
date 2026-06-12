@@ -537,7 +537,7 @@ export class TAPOCamera extends OnvifCamera {
       try {
         const url = await this.getAuthenticatedAPIURL(loginRetryCount);
 
-        let fetchParams: Record<string, unknown> = {};
+        let fetchParams: Record<string, unknown> = { method: "post" };
         const isSecureConnection = await this.isSecureConnection();
 
         if (this.seq && isSecureConnection) {
