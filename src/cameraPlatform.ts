@@ -22,17 +22,34 @@ export class CameraPlatform implements IndependentPlatformPlugin {
   }
 
   private discoverDevices() {
-    this.config.cameras?.forEach(async (cameraConfig) => {
-      try {
-        const cameraAccessory = new CameraAccessory(this, cameraConfig);
-        await cameraAccessory.setup();
-      } catch (err) {
-        this.log.error(
-          `Error during setup of camera "${cameraConfig.name}"`,
-          err,
-          err instanceof Error ? err.stack : []
-        );
-      }
+    this.config.cameras?.forEach((cameraConfig) => {
+      this.setupCamera(cameraConfig);
     });
+  }
+
+  private async setupCamera(cameraConfig: CameraConfig, retryAfterSuspension = false): Promise<void> {
+    try {
+      const cameraAccessory = new CameraAccessory(this, cameraConfig);
+      await cameraAccessory.setup();
+    } catch (err) {
+      const suspensionMatch =
+        err instanceof Error &&
+        err.message.match(/Try again in (\d+) seconds/);
+
+      if (suspensionMatch && !retryAfterSuspension) {
+        const seconds = parseInt(suspensionMatch[1], 10);
+        this.log.warn(
+          `Camera "${cameraConfig.name}" is temporarily suspended. Retrying in ${seconds} seconds...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+        return this.setupCamera(cameraConfig, true);
+      }
+
+      this.log.error(
+        `Error during setup of camera "${cameraConfig.name}"`,
+        err,
+        err instanceof Error ? err.stack : []
+      );
+    }
   }
 }
