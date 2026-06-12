@@ -30,6 +30,8 @@ If your video feed is not working, try to check if any of the parameters at the 
 
 - _"LED"_ switches on/off the LED.
 
+- _"Floodlight"_ switches on/off the floodlight (only for supported cameras, opt-in via config).
+
 An example Home automation could be:
 
 - When leaving home, enable *Eyes, Alarm, Notifications, Motion Detection, LED*

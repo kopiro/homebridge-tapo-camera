@@ -38,6 +38,7 @@ export type Status = {
   notifications: boolean | undefined;
   motionDetection: boolean | undefined;
   led: boolean | undefined;
+  floodLight: boolean | undefined;
 };
 
 export class TAPOCamera extends OnvifCamera {
@@ -692,6 +693,16 @@ export class TAPOCamera extends OnvifCamera {
         },
       },
     }),
+    floodLight: (value) => ({
+      method: "setLdc",
+      params: {
+        image: {
+          switch: {
+            force_wtl_state: value ? "on" : "off",
+          },
+        },
+      },
+    }),
   };
 
   async setStatus(service: keyof Status, value: boolean) {
@@ -784,6 +795,14 @@ export class TAPOCamera extends OnvifCamera {
               },
             },
           },
+          {
+            method: "getLdc",
+            params: {
+              image: {
+                name: ["switch"],
+              },
+            },
+          },
         ],
       },
     });
@@ -799,12 +818,14 @@ export class TAPOCamera extends OnvifCamera {
       (r) => r.method === "getDetectionConfig"
     );
     const led = operations.find((r) => r.method === "getLedStatus");
+    const ldc = operations.find((r) => r.method === "getLdc");
 
     if (!alert) this.log.debug("No alert config found");
     if (!lensMask) this.log.debug("No lens mask config found");
     if (!notifications) this.log.debug("No notifications config found");
     if (!motionDetection) this.log.debug("No motion detection config found");
     if (!led) this.log.debug("No led config found");
+    if (!ldc) this.log.debug("No ldc (floodlight) config found");
 
     return {
       alarm: alert
@@ -822,6 +843,9 @@ export class TAPOCamera extends OnvifCamera {
         ? motionDetection.result.motion_detection.motion_det.enabled === "on"
         : undefined,
       led: led ? led.result.led.config.enabled === "on" : undefined,
+      floodLight: ldc && "image" in ldc.result && "switch" in ldc.result.image && "force_wtl_state" in ldc.result.image.switch
+        ? (ldc.result.image.switch as any).force_wtl_state === "on"
+        : undefined,
     };
   }
 }

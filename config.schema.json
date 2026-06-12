@@ -92,6 +92,11 @@
             "type": "boolean",
             "description": "Disables the LED switch accessory"
           },
+          "enableFloodLightAccessory": {
+            "title": "Enable Floodlight toggle",
+            "type": "boolean",
+            "description": "Enables the Floodlight lightbulb accessory (opt-in because not all cameras support it)"
+          },
           "disableMotionSensorAccessory": {
             "title": "Disable Motion sensor",
             "type": "boolean",
@@ -127,10 +132,16 @@
             "placeholder": "Motion Detection"
           },
           "ledToggleAccessoryName": {
-            "title": "LED toggle Name",
+            "title": "LED toggle accessory name",
             "type": "string",
-            "description": "Name of the LED toggle",
-            "placeholder": "LED"
+            "placeholder": "LED",
+            "description": "Rename the LED toggle"
+          },
+          "floodLightAccessoryName": {
+            "title": "Floodlight toggle accessory name",
+            "type": "string",
+            "placeholder": "Floodlight",
+            "description": "Rename the Floodlight toggle"
           },
           "videoMaxWidth": {
             "title": "Video Max Width",

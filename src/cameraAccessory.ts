@@ -28,6 +28,7 @@ export type CameraConfig = {
   disableNotificationsToggleAccessory?: boolean;
   disableMotionDetectionToggleAccessory?: boolean;
   disableLEDToggleAccessory?: boolean;
+  enableFloodLightAccessory?: boolean;
 
   disableMotionSensorAccessory?: boolean;
   lowQuality?: boolean;
@@ -47,6 +48,7 @@ export type CameraConfig = {
   notificationsToggleAccessoryName?: string;
   motionDetectionToggleAccessoryName?: string;
   ledToggleAccessoryName?: string;
+  floodLightAccessoryName?: string;
 };
 
 export class CameraAccessory {
@@ -106,10 +108,14 @@ export class CameraAccessory {
       );
   }
 
-  private setupToggleAccessory(name: string, tapoServiceStr: keyof Status) {
+  private setupToggleAccessory(
+    name: string,
+    tapoServiceStr: keyof Status,
+    serviceType: any = this.api.hap.Service.Switch
+  ) {
     try {
       const toggleService = this.accessory.addService(
-        this.api.hap.Service.Switch,
+        serviceType,
         name,
         tapoServiceStr
       );
@@ -349,6 +355,14 @@ export class CameraAccessory {
       this.setupToggleAccessory(
         this.config.ledToggleAccessoryName || "LED",
         "led"
+      );
+    }
+
+    if (this.config.enableFloodLightAccessory) {
+      this.setupToggleAccessory(
+        this.config.floodLightAccessoryName || "Floodlight",
+        "floodLight",
+        this.api.hap.Service.Lightbulb
       );
     }
 

@@ -54,6 +54,14 @@ export type TAPOCameraGetRequest =
           get_wtl_status: "null";
         };
       };
+    }
+  | {
+      method: "getLdc";
+      params: {
+        image: {
+          name: ["switch"];
+        };
+      };
     };
 
 export type TAPOCameraSetRequest =
@@ -116,7 +124,18 @@ export type TAPOCameraSetRequest =
       params: {
         image: {
           switch: {
-            wtl_intensity_level: string;
+            wtl_intensity_level?: string;
+            force_wtl_state?: "on" | "off";
+          };
+        };
+      };
+    }
+  | {
+      method: "setLdc";
+      params: {
+        image: {
+          switch: {
+            force_wtl_state: "on" | "off";
           };
         };
       };
@@ -210,13 +229,39 @@ export type TAPOCameraResponseGetLed = {
   error_code: number;
 };
 
+export type TAPOCameraResponseGetLdc = {
+  method: "getLdc";
+  result: {
+    image: {
+      switch: {
+        force_wtl_state: "on" | "off";
+      };
+    };
+  };
+  error_code: number;
+};
+
+export type TAPOCameraResponseGetWhitelampStatus = {
+  method: "getWhitelampStatus";
+  result: {
+    image: {
+      switch: {
+        force_wtl_state: "on" | "off";
+      };
+    };
+  };
+  error_code: number;
+};
+
 export type TAPOCameraResponseSet = {
   method:
     | "setLensMaskConfig"
     | "setAlertConfig"
     | "setMsgPushConfig"
     | "setDetectionConfig"
-    | "setLedStatus";
+    | "setLedStatus"
+    | "setWhitelampConfig"
+    | "setLdc";
   result: object;
   error_code: number;
 };
@@ -226,7 +271,9 @@ export type TAPOCameraResponseGet =
   | TAPOCameraResponseGetLensMask
   | TAPOCameraResponseGetNotifications
   | TAPOCameraResponseGetMotionDetection
-  | TAPOCameraResponseGetLed;
+  | TAPOCameraResponseGetLed
+  | TAPOCameraResponseGetLdc
+  | TAPOCameraResponseGetWhitelampStatus;
 
 export type TAPOBasicInfo = {
   device_type: string;
