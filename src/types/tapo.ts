@@ -62,6 +62,14 @@ export type TAPOCameraGetRequest =
           name: ["switch"];
         };
       };
+    }
+  | {
+      method: "getWhitelampStatus";
+      params: {
+        image: {
+          get_wtl_status: string[];
+        };
+      };
     };
 
 export type TAPOCameraSetRequest =
