@@ -72,7 +72,7 @@ export class TAPOCamera extends OnvifCamera {
       connect: {
         // TAPO devices have self-signed certificates
         rejectUnauthorized: false,
-        ciphers: "AES256-SHA:AES128-GCM-SHA256",
+        ciphers: "ALL:@SECLEVEL=0",
       },
     });
 
