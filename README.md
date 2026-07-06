@@ -62,10 +62,27 @@ npm -g install homebridge-tapo-camera
 
 It is highly recommended that you use either Homebridge Config UI X or the HOOBS UI to install and configure this plugin.
 
+#### Expose only switches and sensors
+
+If your camera is already paired with HomeKit natively, you can use this plugin only for the TAPO controls that native HomeKit does not expose.
+
+Set `disableStreaming` to `true` to skip the Homebridge camera stream while keeping the toggle accessories. If you also do not want the ONVIF motion sensor, set `disableMotionSensorAccessory` to `true`; in that setup, `streamUser` and `streamPassword` are not required.
+
+```json
+{
+  "name": "My Camera Controls",
+  "ipAddress": "192.168.0.XXX",
+  "password": "your-tapo-password",
+  "disableStreaming": true,
+  "disableMotionSensorAccessory": true
+}
+```
+
+To keep the ONVIF motion sensor enabled, provide `streamUser` and `streamPassword` from the TAPO app camera account.
+
 ### FFmpeg installation
 
 The plugin should take care of installing the `ffmpeg` automatically.
 
 > [!IMPORTANT]  
 > If you're getting errors like `FFmpeg exited with code: 1 and signal: null (Error)`, please follow the instructions here on how to install [ffmpeg-for-homebridge](https://github.com/homebridge/ffmpeg-for-homebridge) binaries manually.
-

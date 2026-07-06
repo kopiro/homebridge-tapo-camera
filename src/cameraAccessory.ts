@@ -18,8 +18,8 @@ export type CameraConfig = {
   ipAddress: string;
   username: string;
   password: string;
-  streamUser: string;
-  streamPassword: string;
+  streamUser?: string;
+  streamPassword?: string;
 
   pullInterval?: number;
   disableStreaming?: boolean;
@@ -87,6 +87,16 @@ export class CameraAccessory {
       this.api.hap.Categories.CAMERA
     );
     this.camera = new TAPOCamera(this.log, this.config);
+  }
+
+  private hasStreamCredentials() {
+    return Boolean(this.config.streamUser && this.config.streamPassword);
+  }
+
+  private isMotionSensorEnabled() {
+    return (
+      !this.config.disableMotionSensorAccessory && this.hasStreamCredentials()
+    );
   }
 
   private setupInfoAccessory(basicInfo: TAPOBasicInfo) {
@@ -225,6 +235,13 @@ export class CameraAccessory {
 
   private async setupCameraStreaming(basicInfo: TAPOBasicInfo) {
     try {
+      if (!this.hasStreamCredentials()) {
+        this.log.error(
+          "Camera streaming requires streamUser and streamPassword. Set disableStreaming to true for controls-only setups."
+        );
+        return;
+      }
+
       const delegate = new StreamingDelegate(
         new Logger(this.log),
         {
@@ -250,6 +267,13 @@ export class CameraAccessory {
 
   private async setupMotionSensorAccessory() {
     try {
+      if (!this.hasStreamCredentials()) {
+        this.log.warn(
+          "Motion sensor requires streamUser and streamPassword. Skipping motion sensor setup."
+        );
+        return;
+      }
+
       this.motionSensorService = this.accessory.addService(
         this.platform.api.hap.Service.MotionSensor,
         "Motion Sensor",
@@ -295,11 +319,10 @@ export class CameraAccessory {
       
       if (
         this.isOffline ||
-        (!this.config.disableMotionSensorAccessory &&
-          !this.camera.onvifConnected)
+        (this.isMotionSensorEnabled() && !this.camera.onvifConnected)
       ) {
         let onvifSuccess = true;
-        if (!this.config.disableMotionSensorAccessory) {
+        if (this.isMotionSensorEnabled()) {
           this.log.info(
             "Camera is back online, restarting ONVIF connection..."
           );
