@@ -37,6 +37,8 @@ export type CameraConfig = {
   videoMaxHeight?: number;
   videoMaxFPS?: number;
   videoForceMax?: boolean;
+  videoMaxBitrate?: number;
+  /** @deprecated misspelling of videoMaxBitrate, kept for configs that used it */
   videoMaxBirate?: number;
   videoPacketSize?: number;
   videoCodec?: string;
@@ -218,7 +220,7 @@ export class CameraAccessory {
       maxWidth: this.config.videoMaxWidth,
       maxHeight: this.config.videoMaxHeight,
       maxFPS: this.config.videoMaxFPS,
-      maxBitrate: this.config.videoMaxBirate,
+      maxBitrate: this.config.videoMaxBitrate ?? this.config.videoMaxBirate,
       packetSize: this.config.videoPacketSize,
       forceMax: this.config.videoForceMax,
       // async resampling prevents backward audio DTS from pcm_alaw packet jitter.
