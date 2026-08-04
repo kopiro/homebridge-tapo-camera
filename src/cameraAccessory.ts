@@ -5,12 +5,12 @@ import {
   PlatformAccessoryEvent,
   Service,
 } from "homebridge";
-import { StreamingDelegate } from "homebridge-camera-ffmpeg/dist/streamingDelegate";
-import { Logger } from "homebridge-camera-ffmpeg/dist/logger";
 import { Status, TAPOCamera } from "./tapoCamera";
 import { PLUGIN_ID } from "./pkg";
 import { CameraPlatform } from "./cameraPlatform";
-import { VideoConfig } from "homebridge-camera-ffmpeg/dist/configTypes";
+import type { VideoConfig } from "@homebridge-plugins/homebridge-camera-ffmpeg/dist/settings.js" with {
+  "resolution-mode": "import",
+};
 import { TAPOBasicInfo } from "./types/tapo";
 
 export type CameraConfig = {
@@ -31,6 +31,8 @@ export type CameraConfig = {
   enableFloodLightAccessory?: boolean;
 
   disableMotionSensorAccessory?: boolean;
+  enableHKSV?: boolean;
+  enableHKSVPrebuffer?: boolean;
   lowQuality?: boolean;
 
   videoMaxWidth?: number;
@@ -98,6 +100,14 @@ export class CameraAccessory {
   private isMotionSensorEnabled() {
     return (
       !this.config.disableMotionSensorAccessory && this.hasStreamCredentials()
+    );
+  }
+
+  private isHKSVEnabled() {
+    return Boolean(
+      this.config.enableHKSV &&
+        !this.config.disableStreaming &&
+        this.isMotionSensorEnabled()
     );
   }
 
@@ -226,6 +236,13 @@ export class CameraAccessory {
       // async resampling prevents backward audio DTS from pcm_alaw packet jitter.
       mapaudio: "0:a:0 -af aresample=async=16000",
       ...(this.config.videoConfig || {}),
+      // HKSV is intentionally controlled by the dedicated top-level option. A
+      // raw videoConfig override could otherwise enable continuous recording
+      // without the ONVIF motion service that HomeKit needs to trigger clips.
+      recording: this.isHKSVEnabled(),
+      prebuffer: Boolean(
+        this.isHKSVEnabled() && this.config.enableHKSVPrebuffer
+      ),
       // We add this at the end as the user must not be able to override it
       source: `-rtsp_transport tcp -i ${streamUrl}`,
     };
@@ -244,6 +261,22 @@ export class CameraAccessory {
         return;
       }
 
+      if (this.config.enableHKSV && !this.isHKSVEnabled()) {
+        this.log.error(
+          "HomeKit Secure Video requires the ONVIF motion sensor and streamUser/streamPassword. HKSV recording will remain disabled."
+        );
+      }
+
+      // camera-ffmpeg v4 is ESM while Homebridge still loads this plugin through
+      // its CommonJS entry point. Native dynamic imports preserve that boundary
+      // without converting every existing consumer-facing module in one release.
+      const [{ StreamingDelegate }, { Logger }] = await Promise.all([
+        import(
+          "@homebridge-plugins/homebridge-camera-ffmpeg/dist/streamingDelegate.js"
+        ),
+        import("@homebridge-plugins/homebridge-camera-ffmpeg/dist/logger.js"),
+      ]);
+
       const delegate = new StreamingDelegate(
         new Logger(this.log),
         {
@@ -252,14 +285,42 @@ export class CameraAccessory {
           model: basicInfo.device_info,
           serialNumber: basicInfo.mac,
           firmwareRevision: basicInfo.sw_version,
-          unbridge: true,
           videoConfig: this.getVideoConfig(),
         },
         this.api,
-        this.api.hap
+        this.api.hap,
+        this.accessory
       );
 
       this.accessory.configureController(delegate.controller);
+
+      if (this.isHKSVEnabled() && this.motionSensorService) {
+        const recordingManagement = delegate.controller.recordingManagement;
+
+        // The generic camera delegate advertises motion-triggered recording but
+        // cannot know which service carries this camera's ONVIF events. Linking
+        // the exact service makes HomeKit use those events for HKSV clips and
+        // mirrors the camera-active state back to the same sensor.
+        recordingManagement?.recordingManagementService.addLinkedService(
+          this.motionSensorService
+        );
+        if (
+          recordingManagement &&
+          !recordingManagement.sensorServices.includes(this.motionSensorService)
+        ) {
+          recordingManagement.sensorServices.push(this.motionSensorService);
+        }
+        this.motionSensorService.setCharacteristic(
+          this.api.hap.Characteristic.StatusActive,
+          true
+        );
+      }
+
+      // Prebuffering must begin before the first motion event; starting it only
+      // when HomeKit requests a clip would lose the seconds the option promises.
+      if (this.isHKSVEnabled() && this.config.enableHKSVPrebuffer) {
+        await delegate.recordingDelegate?.startPreBuffer();
+      }
 
       this.log.debug("Camera streaming setup done");
     } catch (err) {
@@ -276,11 +337,16 @@ export class CameraAccessory {
         return;
       }
 
-      this.motionSensorService = this.accessory.addService(
-        this.platform.api.hap.Service.MotionSensor,
-        "Motion Sensor",
-        "motion"
-      );
+      // Reuse any restored sensor instead of publishing a second service. HKSV
+      // later links this exact instance so ONVIF events and recordings cannot
+      // drift onto separate motion characteristics after a restart.
+      this.motionSensorService =
+        this.accessory.getService(this.platform.api.hap.Service.MotionSensor) ||
+        this.accessory.addService(
+          this.platform.api.hap.Service.MotionSensor,
+          "Motion Sensor",
+          "motion"
+        );
 
       this.motionSensorService.addOptionalCharacteristic(
         this.api.hap.Characteristic.ConfiguredName
@@ -371,8 +437,20 @@ export class CameraAccessory {
 
     this.setupInfoAccessory(basicInfo);
 
+    if (!this.config.disableMotionSensorAccessory) {
+      // The ONVIF service must exist before the HKSV controller is configured so
+      // the recording management can link the exact service receiving events.
+      await this.setupMotionSensorAccessory();
+    }
+
+    if (this.config.enableHKSV && this.config.disableStreaming) {
+      this.log.error(
+        "HomeKit Secure Video cannot be enabled when disableStreaming is true. HKSV recording will remain disabled."
+      );
+    }
+
     if (!this.config.disableStreaming) {
-      this.setupCameraStreaming(basicInfo);
+      await this.setupCameraStreaming(basicInfo);
     }
 
     if (!this.config.disableEyesToggleAccessory) {
@@ -416,10 +494,6 @@ export class CameraAccessory {
         "floodLight",
         this.api.hap.Service.Lightbulb
       );
-    }
-
-    if (!this.config.disableMotionSensorAccessory) {
-      this.setupMotionSensorAccessory();
     }
 
     // // Publish as external accessory
