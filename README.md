@@ -50,6 +50,26 @@ Make sure you activate "Activity Notifications" in the "Status and Notifications
 > [!NOTE]  
 > Some people may have issues resulting the plugin crashing at startup when this option is enabled. If you see an error like `Error: read ECONNRESET at TCP.onStreamRead` try to disable the motion sensor by setting `disableMotionSensorAccessory` to `true`
 
+### HomeKit Secure Video (experimental)
+
+Version 3 adds opt-in HomeKit Secure Video recording through camera-ffmpeg v4. Enable `enableHKSV` on a camera to let its ONVIF motion events trigger HKSV clips. This requires `streamUser` and `streamPassword`, the motion sensor must remain enabled, and Apple Home must have a compatible Home hub and iCloud plan.
+
+Set `enableHKSVPrebuffer` to `true` if clips should include the seconds before motion was detected. Prebuffering runs FFmpeg continuously, so it increases persistent CPU, network, and camera-stream usage.
+
+```json
+{
+  "name": "Front Camera",
+  "ipAddress": "192.168.0.XXX",
+  "password": "your-tapo-password",
+  "streamUser": "your-stream-user",
+  "streamPassword": "your-stream-password",
+  "enableHKSV": true,
+  "enableHKSVPrebuffer": true
+}
+```
+
+This release requires Node.js 20 or newer. HKSV should remain opt-in while the v3 implementation is validated across real Tapo models and HomeKit hubs.
+
 ## Installation
 
 You can install it via Homebridge UI or manually using:

@@ -32,7 +32,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - run: npm ci
 
-      - name: Create patch version
+      - name: Create release version
         id: version
         run: |
           git config user.name "github-actions[bot]"
@@ -40,7 +40,16 @@ jobs:
 
           # The release commit remains in the repository so package.json, the npm
           # artifact, the Git tag, and the GitHub Release always describe one version.
-          npm version patch -m "chore: release v%s [skip ci]"
+          # A deliberately declared, untagged version lets a breaking change publish
+          # its major release instead of being rewritten as another patch. Once that
+          # version is tagged, ordinary commits continue the automatic patch cadence.
+          package_version=$(node -p "require('./package.json').version")
+          if git rev-parse --verify --quiet "refs/tags/v$package_version"; then
+            npm version patch -m "chore: release v%s [skip ci]"
+          else
+            git commit --allow-empty -m "chore: release v$package_version [skip ci]"
+            git tag "v$package_version"
+          fi
           echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Push version commit and tag

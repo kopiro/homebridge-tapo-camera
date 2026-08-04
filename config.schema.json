@@ -100,6 +100,18 @@
             "type": "boolean",
             "description": "Disables the Motion sensor accessory"
           },
+          "enableHKSV": {
+            "title": "Enable HomeKit Secure Video",
+            "type": "boolean",
+            "default": false,
+            "description": "Enables HomeKit Secure Video recording for motion events. Requires the ONVIF motion sensor, stream credentials, a Home hub, and a compatible iCloud plan. This is experimental and should be enabled only while testing the v3 release."
+          },
+          "enableHKSVPrebuffer": {
+            "title": "Enable HKSV prebuffer",
+            "type": "boolean",
+            "default": false,
+            "description": "Continuously prebuffers the camera stream so HKSV clips include video from before motion was detected. Only applies when HomeKit Secure Video is enabled and increases persistent CPU, network, and FFmpeg usage."
+          },
           "lowQuality": {
             "title": "Low Quality",
             "type": "boolean",
