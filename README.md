@@ -70,6 +70,28 @@ Set `enableHKSVPrebuffer` to `true` if clips should include the seconds before m
 
 This release requires Node.js 20 or newer. HKSV should remain opt-in while the v3 implementation is validated across real Tapo models and HomeKit hubs.
 
+#### Choppy video with `videoCodec: "copy"`
+
+Some Tapo RTSP streams, including a tested C200 hardware revision 5.0, emit non-monotonic video timestamps. FFmpeg cannot repair those timestamps while copying H.264 packets unchanged, which can make HomeKit display only an occasional frame. In that case, transcode the stream instead of using the default `copy` codec.
+
+The following Raspberry Pi 4 configuration was reported to work with its `h264_v4l2m2m` hardware encoder. Match `videoMaxFPS` to the camera's actual source frame rate; requesting a higher rate creates duplicate frames and wastes bandwidth. Encoder-specific FFmpeg arguments belong inside `videoConfig.encoderOptions`, not at the camera's top level.
+
+```json
+{
+  "videoCodec": "h264_v4l2m2m",
+  "videoMaxWidth": 1920,
+  "videoMaxHeight": 1080,
+  "videoMaxFPS": 17,
+  "videoMaxBitrate": 3500,
+  "videoForceMax": true,
+  "videoConfig": {
+    "encoderOptions": "-g 30 -bf 0 -num_capture_buffers 32"
+  }
+}
+```
+
+Hardware encoders and their accepted options vary by host. Keep `copy` when the camera produces HomeKit-compatible timestamps or when the Homebridge host cannot sustain transcoding.
+
 ## Installation
 
 You can install it via Homebridge UI or manually using:
