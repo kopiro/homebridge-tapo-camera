@@ -14,7 +14,7 @@ import type {
   TAPOCameraGetRequest,
   TAPOCameraSetRequest,
 } from "./types/tapo";
-import { Agent } from "undici";
+import { Agent, fetch, type RequestInit } from "undici";
 
 const MAX_LOGIN_RETRIES = 2;
 const AES_BLOCK_SIZE = 16;
@@ -127,7 +127,6 @@ export class TAPOCamera extends OnvifCamera {
   private fetch(url: string, data: RequestInit) {
     return fetch(url, {
       headers: this.getHeaders(),
-      // @ts-expect-error Dispatcher type not there
       dispatcher: this.fetchAgent,
       ...data,
     });
