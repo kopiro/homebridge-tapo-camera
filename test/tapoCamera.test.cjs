@@ -20,8 +20,9 @@ test('camera requests use bundled Undici with the self-signed TLS agent', async 
       let body = '';
       for await (const chunk of req) body += chunk;
       requests.push({ method: req.method, headers: req.headers, body });
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error_code: 0 }));
+      const payload = JSON.stringify({ error_code: 0 });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) });
+      res.end(payload);
     });
   const camera = new TAPOCamera({}, { ipAddress: '127.0.0.1', password: 'test-password' });
   const nativeFetch = globalThis.fetch;
@@ -39,6 +40,7 @@ test('camera requests use bundled Undici with the self-signed TLS agent', async 
     const override = await camera.fetch(url, { method: 'POST', headers: { 'X-Tapo-Test': 'override' } });
     await override.text();
     assert.equal(requests[1].headers['x-tapo-test'], 'override');
+
   } finally {
     globalThis.fetch = nativeFetch;
     await camera.fetchAgent.close();
