@@ -8,7 +8,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.13.0, 20.16.x, 22.5.x]
+        node-version: [18.17.0, 20.16.x, 22.5.x, 24.12.x, 26.13.x]
 
     steps:
       - uses: actions/checkout@v3
@@ -26,3 +26,6 @@ jobs:
           
       - name: Build the project
         run: npm run build
+
+      - name: Test camera HTTP transport
+        run: node --test test/*.test.cjs
