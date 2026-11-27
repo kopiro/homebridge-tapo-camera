@@ -70,7 +70,36 @@ export type TAPOCameraGetRequest =
           get_wtl_status: string[];
         };
       };
+    }
+  | {
+      method: "getClockStatus";
+      params: {
+        system: {
+          name: "clock_status";
+        };
+      };
+    }
+  | {
+      method: "searchDetectionList";
+      params: {
+        playback: {
+          search_detection_list: {
+            start_index: number;
+            end_index: number;
+            channel: number;
+            start_time: number;
+            end_time: number;
+          };
+        };
+      };
     };
+
+/** One entry from the camera's detection history (searchDetectionList). */
+export type TAPODetectionEvent = {
+  start_time: number;
+  end_time: number;
+  alarm_type: number;
+};
 
 export type TAPOCameraSetRequest =
   | {

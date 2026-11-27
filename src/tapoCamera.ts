@@ -13,6 +13,7 @@ import type {
   TAPOCameraResponseDeviceInfo,
   TAPOCameraGetRequest,
   TAPOCameraSetRequest,
+  TAPODetectionEvent,
 } from "./types/tapo";
 import { Agent, fetch, type RequestInit } from "undici";
 
@@ -847,8 +848,132 @@ export class TAPOCamera extends OnvifCamera {
         : undefined,
       led: led ? led.result.led.config.enabled === "on" : undefined,
       floodLight: wtlStatus && wtlStatus.error_code === 0 && "image" in wtlStatus.result && "get_wtl_status" in wtlStatus.result.image
-        ? (wtlStatus.result.image.get_wtl_status as Record<string, unknown>).status === "on" || (wtlStatus.result.image.get_wtl_status as Record<string, unknown>).status === "1"
+        ? TAPOCamera.isLampOn((wtlStatus.result.image.get_wtl_status as Record<string, unknown>).status)
         : undefined,
     };
+  }
+
+  /** The white lamp status comes back as "on", "1" or 1 depending on firmware. */
+  static isLampOn(status: unknown): boolean {
+    return status === "on" || status === "1" || status === 1 || status === true;
+  }
+
+  /**
+   * Is the camera's own light (spotlight / floodlight / white lamp) on right now?
+   * Returns undefined if the camera doesn't support it or didn't answer.
+   */
+  async getLightOn(): Promise<boolean | undefined> {
+    const responseData = await this.apiRequest({
+      method: "multipleRequest",
+      params: {
+        requests: [
+          {
+            method: "getWhitelampStatus",
+            params: { image: { get_wtl_status: ["null"] } },
+          },
+        ],
+      },
+    });
+
+    const operation = responseData?.result?.responses?.[0] as
+      | { error_code?: number; result?: { image?: { get_wtl_status?: { status?: unknown } } } }
+      | undefined;
+
+    if (!operation || operation.error_code !== 0) {
+      return undefined;
+    }
+
+    const status = operation.result?.image?.get_wtl_status?.status;
+    return status === undefined ? undefined : TAPOCamera.isLampOn(status);
+  }
+
+  /**
+   * How many seconds the camera clock is behind this machine's clock.
+   * Detection history uses the camera's clock, so we need this to ask for
+   * "the last few seconds".
+   */
+  async getClockOffsetSeconds(): Promise<number | undefined> {
+    const responseData = await this.apiRequest({
+      method: "multipleRequest",
+      params: {
+        requests: [
+          {
+            method: "getClockStatus",
+            params: { system: { name: "clock_status" } },
+          },
+        ],
+      },
+    });
+
+    const operation = responseData?.result?.responses?.[0] as
+      | { error_code?: number; result?: { system?: { clock_status?: { seconds_from_1970?: unknown } } } }
+      | undefined;
+
+    const cameraSeconds = Number(
+      operation?.result?.system?.clock_status?.seconds_from_1970
+    );
+    if (!operation || operation.error_code !== 0 || !Number.isFinite(cameraSeconds)) {
+      return undefined;
+    }
+
+    return Math.round(Date.now() / 1000) - cameraSeconds;
+  }
+
+  /**
+   * Detection history between two times (camera clock, in seconds).
+   * Each entry has an alarm_type, e.g. 2 = motion, 6 = person, 17/18 = doorbell.
+   * Cameras only keep this history when they record events to a microSD card.
+   */
+  async getDetectionEvents(
+    startTime: number,
+    endTime: number
+  ): Promise<TAPODetectionEvent[]> {
+    const responseData = await this.apiRequest({
+      method: "multipleRequest",
+      params: {
+        requests: [
+          {
+            method: "searchDetectionList",
+            params: {
+              playback: {
+                search_detection_list: {
+                  start_index: 0,
+                  end_index: 99,
+                  channel: 0,
+                  start_time: Math.floor(startTime),
+                  end_time: Math.ceil(endTime),
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    const operation = responseData?.result?.responses?.[0] as
+      | { error_code?: number; result?: { playback?: { search_detection_list?: unknown } } }
+      | undefined;
+
+    if (!operation || operation.error_code !== 0) {
+      throw new Error(
+        `searchDetectionList failed with error code ${operation?.error_code}`
+      );
+    }
+
+    const list = operation.result?.playback?.search_detection_list;
+    if (!Array.isArray(list)) {
+      return [];
+    }
+
+    return list
+      .map((entry: Record<string, unknown>) => ({
+        start_time: Number(entry?.start_time),
+        end_time: Number(entry?.end_time),
+        alarm_type: Number(entry?.alarm_type),
+      }))
+      .filter(
+        (entry) =>
+          Number.isFinite(entry.start_time) && Number.isFinite(entry.alarm_type)
+      );
   }
 }

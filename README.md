@@ -91,6 +91,42 @@ Camera streams use UDP by default. Set `rtspTransport` to `"tcp"` for a camera i
 }
 ```
 
+#### Sound and picture
+
+All of these are off by default, so existing setups don't change.
+
+- `audioVolume` – sound volume in percent. `100` is normal, `400` is four times louder. Loud settings go through a limiter so they don't crackle.
+- `audioNoiseReduction` – `"off"`, `"light"`, `"medium"` or `"strong"`. Removes hiss, hum and wind rumble. `"strong"` can thin out quiet voices.
+- `videoEnhance` – re-encodes the video with noise reduction and High-profile H.264. Cleaner picture, mostly at night, but uses a lot more CPU. If `videoCodec` is empty or `copy`, `libx264` is used.
+
+Picture breaking up or smearing grey is usually lost packets. Try `"rtspTransport": "tcp"` first; it costs nothing.
+
+#### Presence sensors
+
+Optional occupancy sensors you can use in automations. They are added to the camera; nothing existing is renamed or removed, so rooms and automations stay as they are.
+
+| Option | Sensor is on when | Notes |
+| --- | --- | --- |
+| `enableMotionPresenceSensor` | the camera sees motion | Needs `streamUser` / `streamPassword` |
+| `enablePersonSensor` | the camera sees a person | Turn on Person Detection in the Tapo app. Uses ONVIF person events, and the camera's event history (microSD card needed) as a backup |
+| `enableDoorbellSensor` | a Tapo doorbell is pressed | Listens on UDP port 20005. In Docker, use host networking |
+| `enableLightSensor` | the camera's own light is on | Checked every `lightSensorPollInterval` seconds (default 10) and right after motion |
+
+Each has a matching `...Name` option. `presenceHoldTime` (default 30 seconds) sets how long the motion, person and doorbell sensors stay on. `eventPollInterval` (default 5 seconds, `0` to turn off) sets how often the event history is checked.
+
+```json
+{
+  "name": "Front Door",
+  "rtspTransport": "tcp",
+  "audioVolume": 300,
+  "audioNoiseReduction": "medium",
+  "enablePersonSensor": true,
+  "enableDoorbellSensor": true,
+  "enableLightSensor": true,
+  "lightSensorName": "Porch Light On"
+}
+```
+
 ### FFmpeg installation
 
 The plugin should take care of installing the `ffmpeg` automatically.

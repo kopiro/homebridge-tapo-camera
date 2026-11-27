@@ -207,6 +207,95 @@
               ]
             },
             "description": "Set the codec used for encoding video sent to HomeKit, must be H.264-based. You can change to a hardware accelerated video codec with this option, if one is available. By default, we set 'copy' to avoid any video processing happening on the Homebridge server and disregarding any max values set above, but this also means possibly sending more video data to your devices than necessary, and some Homekit clients may not like not receiving the resolutions/fps they asked for. If you select a custom codec and your ffmpeg process is crashing, it most likely can't handle the video codec you've chosen."
+          },
+          "videoEnhance": {
+            "title": "Cleaner picture",
+            "type": "boolean",
+            "description": "Re-encodes the video on your Homebridge machine with noise reduction and better encoder settings. Removes grain, mostly at night. Uses a lot more CPU. If 'Video Codec' is empty or 'copy', libx264 is used."
+          },
+          "audioVolume": {
+            "title": "Sound volume (%)",
+            "type": "integer",
+            "placeholder": 100,
+            "minimum": 10,
+            "maximum": 1000,
+            "description": "100 is normal. 200 is twice as loud, 400 is four times as loud. Loud settings are limited so they don't crackle."
+          },
+          "audioNoiseReduction": {
+            "title": "Sound noise reduction",
+            "type": "string",
+            "default": "off",
+            "oneOf": [
+              { "title": "Off", "enum": ["off"] },
+              { "title": "Light (keeps quiet voices)", "enum": ["light"] },
+              { "title": "Medium (removes most hiss)", "enum": ["medium"] },
+              { "title": "Strong (may thin out quiet voices)", "enum": ["strong"] }
+            ],
+            "description": "Removes hiss, hum and wind rumble from the camera's microphone."
+          },
+          "enableMotionPresenceSensor": {
+            "title": "Add motion presence sensor",
+            "type": "boolean",
+            "description": "Adds an occupancy sensor that is on while the camera sees motion. Needs Stream User and Stream Password."
+          },
+          "motionPresenceSensorName": {
+            "title": "Motion presence sensor name",
+            "type": "string",
+            "placeholder": "Motion Presence"
+          },
+          "enablePersonSensor": {
+            "title": "Add person sensor",
+            "type": "boolean",
+            "description": "Adds an occupancy sensor that is on while the camera sees a person. Turn on Person Detection in the Tapo app. Uses ONVIF if the camera sends person events, and the camera's event history (needs a microSD card) if it doesn't."
+          },
+          "personSensorName": {
+            "title": "Person sensor name",
+            "type": "string",
+            "placeholder": "Person"
+          },
+          "enableDoorbellSensor": {
+            "title": "Add doorbell pressed sensor",
+            "type": "boolean",
+            "description": "Tapo doorbells only. Adds an occupancy sensor that turns on when the button is pressed. Listens on UDP port 20005 (if Homebridge runs in Docker, use host networking)."
+          },
+          "doorbellSensorName": {
+            "title": "Doorbell pressed sensor name",
+            "type": "string",
+            "placeholder": "Doorbell Pressed"
+          },
+          "enableLightSensor": {
+            "title": "Add light on sensor",
+            "type": "boolean",
+            "description": "Adds an occupancy sensor that is on while the camera's own light (spotlight / floodlight) is on."
+          },
+          "lightSensorName": {
+            "title": "Light on sensor name",
+            "type": "string",
+            "placeholder": "Light On"
+          },
+          "presenceHoldTime": {
+            "title": "Presence hold time (seconds)",
+            "type": "integer",
+            "placeholder": 30,
+            "minimum": 0,
+            "maximum": 3600,
+            "description": "How long the motion, person and doorbell sensors stay on after the event."
+          },
+          "eventPollInterval": {
+            "title": "Event history check (seconds)",
+            "type": "integer",
+            "placeholder": 5,
+            "minimum": 0,
+            "maximum": 300,
+            "description": "How often to check the camera's event history for people and doorbell presses. Set 0 to turn off."
+          },
+          "lightSensorPollInterval": {
+            "title": "Light check (seconds)",
+            "type": "integer",
+            "placeholder": 10,
+            "minimum": 2,
+            "maximum": 600,
+            "description": "How often to check if the camera's light is on. It is also checked right after motion."
           }
         }
       }

@@ -14,6 +14,7 @@ export class OnvifCamera {
   private events: EventEmitter | undefined;
   private device: Cam | undefined;
   private lastMotionValue = false;
+  private lastPersonValue = false;
 
   private readonly kOnvifPort = 2020;
 
@@ -87,6 +88,8 @@ export class OnvifCamera {
     this.log.debug("Starting ONVIF listener...");
 
     onvifDevice.on("event", (event: NotificationMessage) => {
+      this.log.debug("ONVIF event", event?.topic?._);
+
       if (event?.topic?._?.match(/RuleEngine\/CellMotionDetector\/Motion$/)) {
         const motion = event.message.message.data.simpleItem.$.Value;
         if (motion !== this.lastMotionValue) {
@@ -95,8 +98,44 @@ export class OnvifCamera {
             this.events.emit("motion", motion);
           }
         }
+        return;
+      }
+
+      // Person detection. Tapo firmware uses several topics for this
+      // (PeopleDetector/People, TPSmartEventDetector/TPSmartEvent,
+      // CellMotionDetector/People...), but all of them carry an "IsPeople"
+      // data item, so we look for that instead of a fixed topic.
+      const person = OnvifCamera.findDataItem(event, "IsPeople");
+      if (person !== undefined) {
+        const detected = person === true || person === "true";
+        if (detected !== this.lastPersonValue) {
+          this.lastPersonValue = detected;
+          this.events?.emit("person", detected);
+        }
       }
     });
+  }
+
+  /**
+   * Returns the value of a named ONVIF data item, or undefined if the event
+   * doesn't have it. The onvif library gives a single object when there is one
+   * item and an array when there are several.
+   */
+  static findDataItem(
+    event: NotificationMessage | undefined,
+    name: string
+  ): unknown {
+    const raw = (
+      event?.message?.message?.data as { simpleItem?: unknown } | undefined
+    )?.simpleItem;
+    const items = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    for (const item of items) {
+      const attrs = (item as { $?: { Name?: string; Value?: unknown } })?.$;
+      if (attrs?.Name === name) {
+        return attrs.Value;
+      }
+    }
+    return undefined;
   }
 
   async getDeviceInfo(): Promise<DeviceInformation> {
