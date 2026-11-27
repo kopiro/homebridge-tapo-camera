@@ -1,0 +1,759 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TAPOCamera = void 0;
+const crypto_1 = __importDefault(require("crypto"));
+const onvifCamera_1 = require("./onvifCamera");
+const undici_1 = require("undici");
+const MAX_LOGIN_RETRIES = 2;
+const AES_BLOCK_SIZE = 16;
+const ERROR_CODES_MAP = {
+    "-40401": "Invalid stok value",
+    "-40210": "Function not supported",
+    "-64303": "Action cannot be done while camera is in patrol mode.",
+    "-64324": "Privacy mode is ON, not able to execute",
+    "-64302": "Preset ID not found",
+    "-64321": "Preset ID was deleted so no longer exists",
+    "-40106": "Parameter to get/do does not exist",
+    "-40105": "Method does not exist",
+    "-40101": "Parameter to set does not exist",
+    "-40209": "Invalid login credentials",
+    "-64304": "Maximum Pan/Tilt range reached",
+    "-71103": "User ID is not authorized",
+};
+class TAPOCamera extends onvifCamera_1.OnvifCamera {
+    log;
+    config;
+    kStreamPort = 554;
+    fetchAgent;
+    hashedPassword;
+    hashedSha256Password;
+    hashedSha1Password;
+    passwordEncryptionMethod = null;
+    isSecureConnectionValue = null;
+    cnonce;
+    lsk;
+    ivb;
+    seq;
+    stok;
+    constructor(log, config) {
+        super(log, config);
+        this.log = log;
+        this.config = config;
+        this.fetchAgent = new undici_1.Agent({
+            connectTimeout: 5_000,
+            connect: {
+                // TAPO devices have self-signed certificates
+                rejectUnauthorized: false,
+                ciphers: "ALL:@SECLEVEL=0",
+            },
+        });
+        this.cnonce = this.generateCnonce();
+        this.hashedPassword = crypto_1.default
+            .createHash("md5")
+            .update(config.password)
+            .digest("hex")
+            .toUpperCase();
+        this.hashedSha256Password = crypto_1.default
+            .createHash("sha256")
+            .update(config.password)
+            .digest("hex")
+            .toUpperCase();
+        this.hashedSha1Password = crypto_1.default
+            .createHash("sha1")
+            .update(config.password)
+            .digest("hex")
+            .toUpperCase();
+    }
+    getUsername() {
+        return this.config.username || "admin";
+    }
+    getHeaders() {
+        return {
+            Host: `https://${this.config.ipAddress}`,
+            Referer: `https://${this.config.ipAddress}`,
+            Accept: "application/json",
+            "Accept-Encoding": "gzip, deflate",
+            "User-Agent": "Tapo CameraClient Android",
+            Connection: "close",
+            requestByApp: "true",
+            "Content-Type": "application/json; charset=UTF-8",
+        };
+    }
+    getHashedPassword() {
+        if (this.passwordEncryptionMethod === "md5") {
+            return this.hashedPassword;
+        }
+        else if (this.passwordEncryptionMethod === "sha256") {
+            return this.hashedSha256Password;
+        }
+        else if (this.passwordEncryptionMethod === "sha1") {
+            return this.hashedSha1Password;
+        }
+        else {
+            throw new Error("Unknown password encryption method");
+        }
+    }
+    fetch(url, data) {
+        return (0, undici_1.fetch)(url, {
+            headers: this.getHeaders(),
+            dispatcher: this.fetchAgent,
+            ...data,
+        });
+    }
+    generateEncryptionToken(tokenType, nonce) {
+        const hashedKey = crypto_1.default
+            .createHash("sha256")
+            .update(this.cnonce + this.getHashedPassword() + nonce)
+            .digest("hex")
+            .toUpperCase();
+        return crypto_1.default
+            .createHash("sha256")
+            .update(tokenType + this.cnonce + nonce + hashedKey)
+            .digest()
+            .slice(0, 16);
+    }
+    getAuthenticatedStreamUrl(lowQuality = false) {
+        const prefix = `rtsp://${this.config.streamUser}:${this.config.streamPassword}@${this.config.ipAddress}:${this.kStreamPort}`;
+        return lowQuality ? `${prefix}/stream2` : `${prefix}/stream1`;
+    }
+    generateCnonce() {
+        return crypto_1.default.randomBytes(8).toString("hex").toUpperCase();
+    }
+    validateDeviceConfirm(nonce, deviceConfirm) {
+        this.passwordEncryptionMethod = null;
+        const hashedNoncesWithSHA256 = crypto_1.default
+            .createHash("sha256")
+            .update(this.cnonce + this.hashedSha256Password + nonce)
+            .digest("hex")
+            .toUpperCase();
+        if (deviceConfirm === hashedNoncesWithSHA256 + nonce + this.cnonce) {
+            this.passwordEncryptionMethod = "sha256";
+            return true;
+        }
+        const hashedNoncesWithMD5 = crypto_1.default
+            .createHash("md5")
+            .update(this.cnonce + this.hashedPassword + nonce)
+            .digest("hex")
+            .toUpperCase();
+        if (deviceConfirm === hashedNoncesWithMD5 + nonce + this.cnonce) {
+            this.passwordEncryptionMethod = "md5";
+            return true;
+        }
+        const hashedNoncesWithSHA1 = crypto_1.default
+            .createHash("sha1")
+            .update(this.cnonce + this.hashedSha1Password + nonce)
+            .digest("hex")
+            .toUpperCase();
+        if (deviceConfirm === hashedNoncesWithSHA1 + nonce + this.cnonce) {
+            this.passwordEncryptionMethod = "sha1";
+            return true;
+        }
+        this.log.debug('Invalid device confirm, expected "sha256", "md5", or "sha1" to match, but none found', {
+            hashedNoncesWithMD5,
+            hashedNoncesWithSHA256,
+            hashedNoncesWithSHA1,
+            deviceConfirm,
+            nonce,
+            cnonce: this.cnonce,
+        });
+        return this.passwordEncryptionMethod !== null;
+    }
+    async refreshStok(loginRetryCount = 0) {
+        this.log.debug("refreshStok: Refreshing stok...");
+        const isSecureConnection = await this.isSecureConnection();
+        let fetchParams = {};
+        if (isSecureConnection) {
+            fetchParams = {
+                method: "post",
+                body: JSON.stringify({
+                    method: "login",
+                    params: {
+                        cnonce: this.cnonce,
+                        encrypt_type: "3",
+                        username: this.getUsername(),
+                    },
+                }),
+            };
+        }
+        else {
+            fetchParams = {
+                method: "post",
+                body: JSON.stringify({
+                    method: "login",
+                    params: {
+                        username: this.getUsername(),
+                        password: this.hashedPassword,
+                        hashed: true,
+                    },
+                }),
+            };
+        }
+        const responseLogin = await this.fetch(`https://${this.config.ipAddress}`, fetchParams);
+        const responseLoginData = (await responseLogin.json());
+        let response, responseData;
+        if (!responseLoginData) {
+            this.log.debug("refreshStok: empty response login data, raising exception", responseLogin.status);
+            throw new Error("Empty response login data");
+        }
+        this.log.debug("refreshStok: Login response", responseLogin.status, responseLoginData);
+        if (responseLogin.status === 401 &&
+            responseLoginData.result?.data?.code === -40411) {
+            this.log.debug("refreshStok: invalid credentials, raising exception", responseLogin.status);
+            throw new Error("Invalid credentials");
+        }
+        if (isSecureConnection) {
+            const nonce = responseLoginData.result?.data?.nonce;
+            const deviceConfirm = responseLoginData.result?.data?.device_confirm;
+            if (nonce &&
+                deviceConfirm &&
+                this.validateDeviceConfirm(nonce, deviceConfirm)) {
+                const digestPasswd = crypto_1.default
+                    .createHash("sha256")
+                    .update(this.getHashedPassword() + this.cnonce + nonce)
+                    .digest("hex")
+                    .toUpperCase();
+                const digestPasswdFull = Buffer.concat([
+                    Buffer.from(digestPasswd, "utf8"),
+                    Buffer.from(this.cnonce, "utf8"),
+                    Buffer.from(nonce, "utf8"),
+                ]).toString("utf8");
+                this.log.debug("refreshStok: sending start_seq request");
+                response = await this.fetch(`https://${this.config.ipAddress}`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        method: "login",
+                        params: {
+                            cnonce: this.cnonce,
+                            encrypt_type: "3",
+                            digest_passwd: digestPasswdFull,
+                            username: this.getUsername(),
+                        },
+                    }),
+                });
+                responseData = (await response.json());
+                if (!responseData) {
+                    this.log.debug("refreshStok: empty response start_seq data, raising exception", response.status);
+                    throw new Error("Empty response start_seq data");
+                }
+                this.log.debug("refreshStok: start_seq response", response.status, JSON.stringify(responseData));
+                if (responseData.result?.start_seq) {
+                    if (responseData.result?.user_group !== "root") {
+                        this.log.debug("refreshStok: Incorrect user_group detected");
+                        // # encrypted control via 3rd party account does not seem to be supported
+                        // # see https://github.com/JurajNyiri/HomeAssistant-Tapo-Control/issues/456
+                        throw new Error("Incorrect user_group detected");
+                    }
+                    this.lsk = this.generateEncryptionToken("lsk", nonce);
+                    this.ivb = this.generateEncryptionToken("ivb", nonce);
+                    this.seq = responseData.result.start_seq;
+                }
+            }
+            else {
+                if ((responseLoginData.error_code === -40413 ||
+                    responseLoginData.error_code === -40211) &&
+                    loginRetryCount < MAX_LOGIN_RETRIES) {
+                    this.log.debug(`refreshStok: Invalid device confirm, retrying: ${loginRetryCount}/${MAX_LOGIN_RETRIES}.`, responseLogin.status, responseLoginData);
+                    return this.refreshStok(loginRetryCount + 1);
+                }
+                this.log.debug("refreshStok: Invalid device confirm and loginRetryCount exhausted, raising exception", loginRetryCount, responseLoginData);
+                throw new Error("Invalid device confirm");
+            }
+        }
+        else {
+            this.passwordEncryptionMethod = "md5";
+            response = responseLogin;
+            responseData = responseLoginData;
+        }
+        const secLeft = responseData.result?.data?.sec_left ?? responseData.result?.sec_left;
+        if (secLeft && secLeft > 0) {
+            this.log.debug("refreshStok: temporary suspension", responseData);
+            throw new Error(`Temporary Suspension: Try again in ${secLeft} seconds`);
+        }
+        if (responseData?.data?.code === -40404 &&
+            responseData?.data?.sec_left &&
+            responseData.data.sec_left > 0) {
+            this.log.debug("refreshStok: temporary suspension", responseData);
+            throw new Error(`refreshStok: Temporary Suspension: Try again in ${responseData.data.sec_left} seconds`);
+        }
+        if (responseData?.result?.stok) {
+            this.stok = responseData.result.stok;
+            this.log.debug("refreshStok: Success in obtaining STOK", this.stok);
+            return;
+        }
+        if (responseData?.error_code === -40413 &&
+            loginRetryCount < MAX_LOGIN_RETRIES) {
+            this.log.debug(`refreshStok: Unexpected response, retrying: ${loginRetryCount}/${MAX_LOGIN_RETRIES}.`, response.status, responseData);
+            return this.refreshStok(loginRetryCount + 1);
+        }
+        this.log.debug("refreshStok: Unexpected end of flow, raising exception");
+        throw new Error("Invalid authentication data");
+    }
+    async isSecureConnection() {
+        if (this.isSecureConnectionValue === null) {
+            this.log.debug("isSecureConnection: Checking secure connection...");
+            const response = await this.fetch(`https://${this.config.ipAddress}`, {
+                method: "post",
+                body: JSON.stringify({
+                    method: "login",
+                    params: {
+                        encrypt_type: "3",
+                        username: this.getUsername(),
+                    },
+                }),
+            });
+            const responseData = (await response.json());
+            this.log.debug("isSecureConnection response", response.status, JSON.stringify(responseData));
+            const errCode = responseData?.error_code;
+            this.isSecureConnectionValue =
+                // -40211 = newer firmware requires cnonce in request (probe doesn't send it)
+                errCode == -40211 ||
+                    (errCode == -40413 &&
+                        String(responseData.result?.data?.encrypt_type || "")?.includes("3"));
+        }
+        return this.isSecureConnectionValue;
+    }
+    stokPromise;
+    getStok(loginRetryCount = 0) {
+        if (this.stok) {
+            return Promise.resolve(this.stok);
+        }
+        if (!this.stokPromise) {
+            this.stokPromise = this.refreshStok(loginRetryCount)
+                .then(() => {
+                if (!this.stok) {
+                    throw new Error("STOK not found");
+                }
+                return this.stok;
+            })
+                .finally(() => {
+                this.stokPromise = undefined;
+            });
+        }
+        return this.stokPromise;
+    }
+    async getAuthenticatedAPIURL(loginRetryCount = 0) {
+        const token = await this.getStok(loginRetryCount);
+        return `https://${this.config.ipAddress}/stok=${token}/ds`;
+    }
+    encryptRequest(request) {
+        const cipher = crypto_1.default.createCipheriv("aes-128-cbc", this.lsk, this.ivb);
+        let ct_bytes = cipher.update(this.encryptPad(request, AES_BLOCK_SIZE), "utf-8", "hex");
+        ct_bytes += cipher.final("hex");
+        return Buffer.from(ct_bytes, "hex");
+    }
+    encryptPad(text, blocksize) {
+        const padSize = blocksize - (text.length % blocksize);
+        const padding = String.fromCharCode(padSize).repeat(padSize);
+        return text + padding;
+    }
+    decryptResponse(response) {
+        const decipher = crypto_1.default.createDecipheriv("aes-128-cbc", this.lsk, this.ivb);
+        let decrypted = decipher.update(response, "base64", "utf-8");
+        decrypted += decipher.final("utf-8");
+        return this.encryptUnpad(decrypted, AES_BLOCK_SIZE);
+    }
+    encryptUnpad(text, blockSize) {
+        const paddingLength = Number(text[text.length - 1]) || 0;
+        if (paddingLength > blockSize || paddingLength > text.length) {
+            throw new Error("Invalid padding");
+        }
+        for (let i = text.length - paddingLength; i < text.length; i++) {
+            if (text.charCodeAt(i) !== paddingLength) {
+                throw new Error("Invalid padding");
+            }
+        }
+        return text.slice(0, text.length - paddingLength).toString();
+    }
+    getTapoTag(request) {
+        const tag = crypto_1.default
+            .createHash("sha256")
+            .update(this.getHashedPassword() + this.cnonce)
+            .digest("hex")
+            .toUpperCase();
+        return crypto_1.default
+            .createHash("sha256")
+            .update(tag + JSON.stringify(request) + this.seq.toString())
+            .digest("hex")
+            .toUpperCase();
+    }
+    pendingAPIRequests = new Map();
+    async apiRequest(req, loginRetryCount = 0) {
+        const reqJson = JSON.stringify(req);
+        if (this.pendingAPIRequests.has(reqJson)) {
+            this.log.debug("API request already pending", reqJson);
+            return this.pendingAPIRequests.get(reqJson);
+        }
+        else {
+            this.log.debug("New API request", reqJson);
+        }
+        const reqPromise = (async () => {
+            try {
+                const url = await this.getAuthenticatedAPIURL(loginRetryCount);
+                const fetchParams = { method: "post" };
+                const isSecureConnection = await this.isSecureConnection();
+                if (this.seq && isSecureConnection) {
+                    const encryptedRequest = {
+                        method: "securePassthrough",
+                        params: {
+                            request: Buffer.from(this.encryptRequest(JSON.stringify(req))).toString("base64"),
+                        },
+                    };
+                    fetchParams.headers = {
+                        ...this.getHeaders(),
+                        Tapo_tag: this.getTapoTag(encryptedRequest),
+                        Seq: this.seq.toString(),
+                    };
+                    fetchParams.body = JSON.stringify(encryptedRequest);
+                    this.seq += 1;
+                }
+                else {
+                    fetchParams.body = JSON.stringify(req);
+                }
+                const response = await this.fetch(url, fetchParams);
+                const responseDataTmp = await response.json();
+                // Apparently the Tapo C200 returns 500 on successful requests,
+                // but it's indicating an expiring token, therefore refresh the token next time
+                if (isSecureConnection && response.status === 500) {
+                    this.log.debug("Stok expired, reauthenticating on next request, setting STOK to undefined");
+                    this.stok = undefined;
+                }
+                let responseData = null;
+                if (isSecureConnection) {
+                    const encryptedResponse = responseDataTmp;
+                    if (encryptedResponse?.result?.response) {
+                        const decryptedResponse = this.decryptResponse(encryptedResponse.result.response);
+                        responseData = JSON.parse(decryptedResponse);
+                    }
+                }
+                else {
+                    responseData = responseDataTmp;
+                }
+                this.log.debug("API response", response.status, JSON.stringify(responseData));
+                // Log error codes
+                if (responseData && responseData.error_code !== 0) {
+                    const errorCode = String(responseData.error_code);
+                    const errorMessage = errorCode in ERROR_CODES_MAP
+                        ? ERROR_CODES_MAP[errorCode]
+                        : "Unknown error";
+                    this.log.debug(`API request failed with specific error code ${errorCode}: ${errorMessage}`);
+                }
+                if (!responseData ||
+                    responseData.error_code === -40401 ||
+                    responseData.error_code === -1) {
+                    this.log.debug("API request failed, reauth now and trying same request again", responseData);
+                    this.stok = undefined;
+                    return this.apiRequest(req, loginRetryCount + 1);
+                }
+                // Success
+                return responseData;
+            }
+            finally {
+                this.pendingAPIRequests.delete(reqJson);
+            }
+        })();
+        this.pendingAPIRequests.set(reqJson, reqPromise);
+        return reqPromise;
+    }
+    static SERVICE_MAP = {
+        eyes: (value) => ({
+            method: "setLensMaskConfig",
+            params: {
+                lens_mask: {
+                    lens_mask_info: {
+                        // Watch out for the inversion
+                        enabled: value ? "off" : "on",
+                    },
+                },
+            },
+        }),
+        alarm: (value) => ({
+            method: "setAlertConfig",
+            params: {
+                msg_alarm: {
+                    chn1_msg_alarm_info: {
+                        enabled: value ? "on" : "off",
+                    },
+                },
+            },
+        }),
+        notifications: (value) => ({
+            method: "setMsgPushConfig",
+            params: {
+                msg_push: {
+                    chn1_msg_push_info: {
+                        notification_enabled: value ? "on" : "off",
+                        rich_notification_enabled: value ? "on" : "off",
+                    },
+                },
+            },
+        }),
+        motionDetection: (value) => ({
+            method: "setDetectionConfig",
+            params: {
+                motion_detection: {
+                    motion_det: {
+                        enabled: value ? "on" : "off",
+                    },
+                },
+            },
+        }),
+        led: (value) => ({
+            method: "setLedStatus",
+            params: {
+                led: {
+                    config: {
+                        enabled: value ? "on" : "off",
+                    },
+                },
+            },
+        }),
+        floodLight: (value) => ({
+            // Floodlight state belongs to the white-lamp API. setLdc controls lens
+            // distortion correction, so using it here accepts the request shape in
+            // TypeScript but leaves the physical light unchanged on the camera.
+            method: "setWhitelampConfig",
+            params: {
+                image: {
+                    switch: {
+                        force_wtl_state: value ? "on" : "off",
+                    },
+                },
+            },
+        }),
+    };
+    async setStatus(service, value) {
+        const responseData = await this.apiRequest({
+            method: "multipleRequest",
+            params: {
+                requests: [TAPOCamera.SERVICE_MAP[service](value)],
+            },
+        });
+        if (responseData.error_code !== 0) {
+            throw new Error(`Failed to perform ${service} action`);
+        }
+        const method = TAPOCamera.SERVICE_MAP[service](value).method;
+        const operation = responseData.result.responses.find((e) => e.method === method);
+        if (operation?.error_code !== 0) {
+            throw new Error(`Failed to perform ${service} action`);
+        }
+        return operation.result;
+    }
+    async getBasicInfo() {
+        const responseData = await this.apiRequest({
+            method: "multipleRequest",
+            params: {
+                requests: [
+                    {
+                        method: "getDeviceInfo",
+                        params: {
+                            device_info: {
+                                name: ["basic_info"],
+                            },
+                        },
+                    },
+                ],
+            },
+        });
+        const info = responseData.result
+            .responses[0];
+        return info.result.device_info.basic_info;
+    }
+    async getStatus() {
+        const requests = [
+            {
+                method: "getAlertConfig",
+                params: {
+                    msg_alarm: {
+                        name: "chn1_msg_alarm_info",
+                    },
+                },
+            },
+            {
+                method: "getLensMaskConfig",
+                params: {
+                    lens_mask: {
+                        name: "lens_mask_info",
+                    },
+                },
+            },
+            {
+                method: "getMsgPushConfig",
+                params: {
+                    msg_push: {
+                        name: "chn1_msg_push_info",
+                    },
+                },
+            },
+            {
+                method: "getDetectionConfig",
+                params: {
+                    motion_detection: {
+                        name: "motion_det",
+                    },
+                },
+            },
+            {
+                method: "getLedStatus",
+                params: {
+                    led: {
+                        name: "config",
+                    },
+                },
+            },
+        ];
+        if (this.config.enableFloodLightAccessory) {
+            requests.push({
+                method: "getWhitelampStatus",
+                params: {
+                    image: {
+                        get_wtl_status: ["null"],
+                    },
+                },
+            });
+        }
+        const responseData = await this.apiRequest({
+            method: "multipleRequest",
+            params: {
+                requests,
+            },
+        });
+        const operations = responseData.result.responses;
+        const alert = operations.find((r) => r.method === "getAlertConfig");
+        const lensMask = operations.find((r) => r.method === "getLensMaskConfig");
+        const notifications = operations.find((r) => r.method === "getMsgPushConfig");
+        const motionDetection = operations.find((r) => r.method === "getDetectionConfig");
+        const led = operations.find((r) => r.method === "getLedStatus");
+        const wtlStatus = operations.find((r) => r.method === "getWhitelampStatus");
+        if (!alert)
+            this.log.debug("No alert config found");
+        if (!lensMask)
+            this.log.debug("No lens mask config found");
+        if (!notifications)
+            this.log.debug("No notifications config found");
+        if (!motionDetection)
+            this.log.debug("No motion detection config found");
+        if (!led)
+            this.log.debug("No led config found");
+        if (this.config.enableFloodLightAccessory && !wtlStatus)
+            this.log.debug("No whitelamp status found");
+        return {
+            alarm: alert
+                ? alert.result.msg_alarm.chn1_msg_alarm_info.enabled === "on"
+                : undefined,
+            // Watch out for the inversion
+            eyes: lensMask
+                ? lensMask.result.lens_mask.lens_mask_info.enabled === "off"
+                : undefined,
+            notifications: notifications
+                ? notifications.result.msg_push.chn1_msg_push_info
+                    .notification_enabled === "on"
+                : undefined,
+            motionDetection: motionDetection
+                ? motionDetection.result.motion_detection.motion_det.enabled === "on"
+                : undefined,
+            led: led ? led.result.led.config.enabled === "on" : undefined,
+            floodLight: wtlStatus && wtlStatus.error_code === 0 && "image" in wtlStatus.result && "get_wtl_status" in wtlStatus.result.image
+                ? TAPOCamera.isLampOn(wtlStatus.result.image.get_wtl_status.status)
+                : undefined,
+        };
+    }
+    /** The white lamp status comes back as "on", "1" or 1 depending on firmware. */
+    static isLampOn(status) {
+        return status === "on" || status === "1" || status === 1 || status === true;
+    }
+    /**
+     * Is the camera's own light (spotlight / floodlight / white lamp) on right now?
+     * Returns undefined if the camera doesn't support it or didn't answer.
+     */
+    async getLightOn() {
+        const responseData = await this.apiRequest({
+            method: "multipleRequest",
+            params: {
+                requests: [
+                    {
+                        method: "getWhitelampStatus",
+                        params: { image: { get_wtl_status: ["null"] } },
+                    },
+                ],
+            },
+        });
+        const operation = responseData?.result?.responses?.[0];
+        if (!operation || operation.error_code !== 0) {
+            return undefined;
+        }
+        const status = operation.result?.image?.get_wtl_status?.status;
+        return status === undefined ? undefined : TAPOCamera.isLampOn(status);
+    }
+    /**
+     * How many seconds the camera clock is behind this machine's clock.
+     * Detection history uses the camera's clock, so we need this to ask for
+     * "the last few seconds".
+     */
+    async getClockOffsetSeconds() {
+        const responseData = await this.apiRequest({
+            method: "multipleRequest",
+            params: {
+                requests: [
+                    {
+                        method: "getClockStatus",
+                        params: { system: { name: "clock_status" } },
+                    },
+                ],
+            },
+        });
+        const operation = responseData?.result?.responses?.[0];
+        const cameraSeconds = Number(operation?.result?.system?.clock_status?.seconds_from_1970);
+        if (!operation || operation.error_code !== 0 || !Number.isFinite(cameraSeconds)) {
+            return undefined;
+        }
+        return Math.round(Date.now() / 1000) - cameraSeconds;
+    }
+    /**
+     * Detection history between two times (camera clock, in seconds).
+     * Each entry has an alarm_type, e.g. 2 = motion, 6 = person, 17/18 = doorbell.
+     * Cameras only keep this history when they record events to a microSD card.
+     */
+    async getDetectionEvents(startTime, endTime) {
+        const responseData = await this.apiRequest({
+            method: "multipleRequest",
+            params: {
+                requests: [
+                    {
+                        method: "searchDetectionList",
+                        params: {
+                            playback: {
+                                search_detection_list: {
+                                    start_index: 0,
+                                    end_index: 99,
+                                    channel: 0,
+                                    start_time: Math.floor(startTime),
+                                    end_time: Math.ceil(endTime),
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+        });
+        const operation = responseData?.result?.responses?.[0];
+        if (!operation || operation.error_code !== 0) {
+            throw new Error(`searchDetectionList failed with error code ${operation?.error_code}`);
+        }
+        const list = operation.result?.playback?.search_detection_list;
+        if (!Array.isArray(list)) {
+            return [];
+        }
+        return list
+            .map((entry) => ({
+            start_time: Number(entry?.start_time),
+            end_time: Number(entry?.end_time),
+            alarm_type: Number(entry?.alarm_type),
+        }))
+            .filter((entry) => Number.isFinite(entry.start_time) && Number.isFinite(entry.alarm_type));
+    }
+}
+exports.TAPOCamera = TAPOCamera;
+//# sourceMappingURL=tapoCamera.js.map
